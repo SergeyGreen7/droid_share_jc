@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">KotlinProject1</string>
+
+    <string name="button_text_ble_enable_service">Enable BLE Service</string>
+    <string name="button_text_ble_disable_service">Disable BLE Service</string>
+    <string name="button_text_ble_enable_scanner">Enable BLE Scanner</string>
+    <string name="button_text_ble_disable_scanner">Disable BLE Scanner</string>
+
+</resources>
