@@ -48,6 +48,7 @@ kotlin {
             implementation(libs.blessed)
             implementation(libs.dbus.java.transport.native.unixsocket)
 //            implementation("com.github.weliem.blessed-bluez:blessed:0.64")
+            implementation(files("../libs/WinBleNativeApi.jar"))
         }
     }
 

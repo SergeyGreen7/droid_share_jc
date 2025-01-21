@@ -1,5 +1,6 @@
 package org.example.project
 
+import WinBleNativeApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -50,10 +51,44 @@ fun App() {
     val scanner by remember { mutableStateOf(McDnsScanner()) }
     var buttonScannerText by remember { mutableStateOf("Start DNS SD Scanner") }
 
+    var buttonBleServiceText by remember { mutableStateOf("Start BLE Service") }
+    var buttonBleScannerText by remember { mutableStateOf("Start BLE Scanner") }
+    val winBle by remember { mutableStateOf(WinBleNativeApi()) }
+
 //    val gattScanner by remember { mutableStateOf(DesktopGattScanner()) }
 //    var gattScannerText by remember { mutableStateOf("Start Gatt Scanner") }
 
     Column {
+        Row() {
+            Button(
+                onClick = {
+                    if (buttonBleScannerText == "Start BLE Scanner") {
+                        buttonBleScannerText = "Stop BLE Scanner"
+                        winBle.runBleScanner()
+                    } else {
+                        buttonBleScannerText = "Start BLE Scanner"
+                        winBle.stopBleScanner()
+                    }
+                }
+            ) {
+                Text(text = buttonBleScannerText)
+            }
+            Spacer(modifier = Modifier.width(100.dp))
+            Button(
+                onClick = {
+                    if (buttonBleServiceText == "Start BLE Service") {
+                        buttonBleServiceText = "Stop BLE Service"
+                        winBle.runBleService()
+                    } else {
+                        buttonBleServiceText = "Start BLE Service"
+                        winBle.stopBleService()
+                    }
+                }
+            ) {
+                Text(text = buttonBleServiceText)
+            }
+        }
+        Spacer(modifier = Modifier.height(25.dp))
         Row() {
             Button(
                 onClick = {

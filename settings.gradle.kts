@@ -1,4 +1,4 @@
-rootProject.name = "KotlinProject1"
+rootProject.name = "droid_share_jc"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
