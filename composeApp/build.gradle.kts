@@ -39,6 +39,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.dns.sd.kt)
             implementation(libs.log4j.slf4j2.impl)
+            implementation(libs.mpfilepicker)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
@@ -109,6 +110,8 @@ dependencies {
     implementation(libs.firebase.inappmessaging.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
+    implementation(libs.androidx.adaptive.android)
+    // implementation(libs.androidx.material3.adaptive.android)
     // debugImplementation(compose.uiTooling)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 }

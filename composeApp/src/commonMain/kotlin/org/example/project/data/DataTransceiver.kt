@@ -1,12 +1,22 @@
 package org.example.project.data
 
-//import org.example.project.data.DataConverter
+//import org.example.project.utils.DataConverter
 //import org.example.project.data.FileManager
 //import org.example.project.NotificationInterface
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.example.project.utils.DataConverter
+import org.example.project.utils.DataTransferState
+import org.example.project.utils.DataTransferStatus
+import org.example.project.utils.MessageType
+import org.example.project.utils.NotificationInterface
+import org.example.project.utils.RxFileDescriptor
+import org.example.project.utils.RxFilePackDescriptor
+import org.example.project.utils.TxFileDescriptor
+import org.example.project.utils.TxFilePackDescriptor
+import org.example.project.utils.isMessageControl
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -86,7 +96,7 @@ class DataTransceiver(
 //                sendCancelTx()
 //                notifier.disconnect()
 //            }
-//            notifier.showToast("Data transmission is canceled")
+//            notifier.showNotification("Data transmission is canceled")
 //
 //            dialog.dismiss()
 //        }
@@ -186,12 +196,12 @@ class DataTransceiver(
                 when (status) {
                     DataTransferStatus.DONE -> {
                         println("the file '${txFileDscr.fileName}' is sent")
-                        notifier.showToast("File '${txFileDscr.fileName}' is sent")
+                        notifier.showNotification("File '${txFileDscr.fileName}' is sent")
                     }
 
                     DataTransferStatus.CANCELED_BY_TX -> {
                         println("File transferring is canceled by transmitter side")
-                        notifier.showToast("File transferring is canceled")
+                        notifier.showNotification("File transferring is canceled")
                         CoroutineScope(Dispatchers.IO).launch {
                             notifier.cancelConnection()
                         }
@@ -201,7 +211,7 @@ class DataTransceiver(
                     DataTransferStatus.CANCELED_BY_RX -> {
                         println("File transferring is canceled by receiver side")
                         notifier.dismissProgressDialog()
-                        notifier.showToast("File transferring is canceled by receiver")
+                        notifier.showNotification("File transferring is canceled by receiver")
                         CoroutineScope(Dispatchers.IO).launch {
                             notifier.cancelConnection()
                         }
@@ -327,7 +337,7 @@ class DataTransceiver(
             DataTransferStatus.DONE -> {
                 println("the file '${{rxFileDscr.fileNameReceived}}' is received")
                 println("new file '${rxFileDscr.fileNameReceived}' received ands saved as '${rxFileDscr.fileNameSaved}'")
-                // notifier.showToast("File '${rxFileDscr.fileNameReceived}' received")
+                // notifier.showNotification("File '${rxFileDscr.fileNameReceived}' received")
                 rxFilePackDscr!!.add(rxFileDscr)
 
                 if (rxFilePackDscr!!.isReceptionFinished()) {
@@ -342,7 +352,7 @@ class DataTransceiver(
             }
             DataTransferStatus.CANCELED_BY_TX -> {
                 println("File transferring '${rxFileDscr.fileNameReceived}' is canceled by transmitter side")
-                notifier.showToast("Data transmission is canceled by transmitter")
+                notifier.showNotification("Data transmission is canceled by transmitter")
                 notifier.dismissProgressDialog()
                 fm.deleteReceivedFiles(rxFilePackDscr!!.dscrs)
                 fm.deleteFile(rxFileDscr.fileNameReceived)
@@ -353,7 +363,7 @@ class DataTransceiver(
             }
             DataTransferStatus.CANCELED_BY_RX -> {
                 println("File transferring '${rxFileDscr.fileNameReceived}' is canceled by receiver side")
-                notifier.showToast("Data transmission is canceled by receiver")
+                notifier.showNotification("Data transmission is canceled by receiver")
                 notifier.dismissProgressDialog()
                 fm.deleteReceivedFiles(rxFilePackDscr!!.dscrs)
                 fm.deleteFile(rxFileDscr.fileNameReceived)
@@ -397,7 +407,7 @@ class DataTransceiver(
         } else if (rxState == DataTransferState.ACTIVE) {
             txState = DataTransferState.CANCEL_BY_RX
         }
-        notifier.showToast("Data transmission is canceled by receiver")
+        notifier.showNotification("Data transmission is canceled by receiver")
         rxState = DataTransferState.IDLE
     }
 
@@ -405,7 +415,7 @@ class DataTransceiver(
         println("Receive cancel rx flag, txState = $txState")
         if (txState == DataTransferState.ACTIVE) {
             txState = DataTransferState.CANCEL_BY_RX
-            notifier.showToast("Data transmission is canceled by receiver")
+            notifier.showNotification("Data transmission is canceled by receiver")
         }
     }
 

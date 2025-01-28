@@ -10,6 +10,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.example.project.connection.mtdns.McDnsService.Companion.SERVICE_TYPE
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.regex.Pattern
 
 class McDnsScanner (
     // private val manager: NsdManager,
@@ -21,6 +22,7 @@ class McDnsScanner (
     }
 
     private var isActive = false
+    private var callbackIsUsed = false
     private var showResolvedServices = true
     private var resolveListenerBusy = AtomicBoolean(false)
 //    private var pendingNsdServices = ConcurrentLinkedQueue<NsdServiceInfo>()
@@ -32,7 +34,18 @@ class McDnsScanner (
     var referenceServiceName = ""
     var callbackOnRefServiceFind: ((serviceInfo: DiscoveredService)-> Unit)? = null
 
+    lateinit private var addressPattern: Pattern
+
+    init {
+        addressPattern = Pattern.compile(
+            "((25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\\." +
+            "(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\." +
+            "(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\." +
+            "(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9]))");
+    }
+
     fun startScan() {
+        callbackIsUsed = false
         println("McDnsScanner, start startScan()")
 
         if (scanJob != null) {
@@ -41,26 +54,44 @@ class McDnsScanner (
 
         println("McDnsScanner, run discoverServices(), type = $SERVICE_TYPE")
         scanJob = CoroutineScope(Dispatchers.IO).launch {
-            discoverServices(SERVICE_TYPE).collect {
+            discoverServices(SERVICE_TYPE).collect { it ->
                 when (it) {
                     is DiscoveryEvent.Discovered -> {
-                        println("discovered service ${it.service.key} - ${it.service}")
-                        // scannedServices[it.service.key] = it.service
-                        it.resolve()
+                        CoroutineScope(Dispatchers.IO).launch {
+                            println("discovered service ${it.service.key} - ${it.service}")
+                            // scannedServices[it.service.key] = it.service
+                            it.resolve()
+                        }
                     }
 
                     is DiscoveryEvent.Removed -> {
-                        println("removed service ${it.service.key} - ${it.service}")
-                        scannedServices.remove(it.service.key)
+                        CoroutineScope(Dispatchers.IO).launch {
+                            println("removed service ${it.service.key} - ${it.service}")
+                            scannedServices.remove(it.service.key)
+                        }
                     }
 
                     is DiscoveryEvent.Resolved -> {
-                        println("resolved service ${it.service.key} - ${it.service}")
-                        scannedServices[it.service.key] = it.service
+                        CoroutineScope(Dispatchers.IO).launch {
+                            println("resolved service ${it.service.key} - ${it.service}")
+                            scannedServices[it.service.key] = it.service
 
-                        if (referenceServiceName.isNotEmpty()) {
-                            if (referenceServiceName == it.service.name) {
-                                callbackOnRefServiceFind?.invoke(it.service)
+                            // Matcher matcher = IP_ADDRESS.matcher("127.0.0.1");
+                            var flag = false
+                            it.service.addresses.forEach({ address ->
+                                if (addressPattern.matcher(address).matches()) {
+                                    println("address $address is a correct IP address")
+                                    flag = true
+                                } else {
+                                    println("address $address is not a correct IP address")
+                                }
+                            })
+
+                            if (referenceServiceName.isNotEmpty() && flag && !callbackIsUsed) {
+                                if (referenceServiceName == it.service.name) {
+                                    callbackIsUsed = true
+                                    callbackOnRefServiceFind?.invoke(it.service)
+                                }
                             }
                         }
                     }

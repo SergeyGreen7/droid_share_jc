@@ -1,21 +1,18 @@
 package org.example.project.data
 
-//import android.util.Log
-
-//import org.example.project.NotificationInterface
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.example.project.utils.NotificationInterface
+import org.example.project.utils.TxFilePackDescriptor
 import java.net.InetAddress
 
 class NsdDataTransceiver(
-    private var notifier : NotificationInterface,
+    notifier: NotificationInterface,
     saveFileDir: String
-    //  = Environment.getExternalStorageDirectory().toString() + "/Download/"
 ) : BaseDataTransceiver()
 {
     companion object {
-        private const val TAG = "WifiDataTransceiver"
         private const val CLIENT_CONNECTION_TIMEOUT_MS = 30000
     }
 
@@ -41,7 +38,8 @@ class NsdDataTransceiver(
     }
 
     suspend fun createSocket(serverFlag: Boolean, port: Int, address: InetAddress,
-                             txFilePack: TxFilePackDescriptor ) {
+                             txFilePack: TxFilePackDescriptor
+    ) {
         this.txFilePack = txFilePack.copy()
 
         if (!tcpP2pConnector!!.isSocketCreated()) {
@@ -90,11 +88,5 @@ class NsdDataTransceiver(
         dataTransceiver!!.shutdown()
         println("NsdDataTransceiver, destroySocket(), run tcpP2pConnector!!.shutdown()")
         tcpP2pConnector!!.shutdown()
-
-//        dataTransceiver = DataTransceiver(
-//            notifier,
-//            saveFileDir = TODO()
-//        )
-//        tcpP2pConnector = TcpP2pConnector()
     }
 }

@@ -4,15 +4,16 @@ package org.example.project.data
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.example.project.utils.NotificationInterface
+import org.example.project.utils.TxFilePackDescriptor
 import java.net.InetAddress
 
 class WifiDataTransceiver(
-    private var notifier : NotificationInterface,
+    notifier : NotificationInterface,
     saveFileDir: String
 ) : BaseDataTransceiver()
 {
     companion object {
-        private const val TAG = "WifiDataTransceiver"
         private const val PORT_NUMBER = 8888
         private val CLIENT_CONNECTION_TIMEOUT_MS = 30000
     }
@@ -29,7 +30,8 @@ class WifiDataTransceiver(
     }
 
     suspend fun createSocket(isGroupOwner: Boolean, address: InetAddress,
-                             txFilePack: TxFilePackDescriptor) {
+                             txFilePack: TxFilePackDescriptor
+    ) {
         println("WifiDataTransceiver, start createSocket(), " +
                 "!wifiClientServer!!.isSocketCreated() = ${!wifiClientServer!!.isSocketCreated()}")
         this.txFilePack = txFilePack.copy()

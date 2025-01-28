@@ -18,7 +18,7 @@ class McDnsService (
 ) {
     companion object {
         const val SERVICE_NAME = "NSD_AQUARIUS"
-        const val SERVICE_TYPE = "_example._tcp"
+        const val SERVICE_TYPE = "_aq_fs_service._tcp"
         // const val NSD_PROTOCOL = NsdManager.PROTOCOL_DNS_SD
 
         private const val TAG = "LnsService"
@@ -29,27 +29,20 @@ class McDnsService (
     var serviceName = namePrefix + SERVICE_NAME
     lateinit var service: NetService
 
-    fun registerService() {
+    suspend fun registerService() {
         service = createNetService(
             type = SERVICE_TYPE,
             name = serviceName,
             port = SERVICE_PORT,
-            txt =
-            mapOf(
-                "key1" to "value1",
-                "key2" to "value2",
-            ),
         )
 
-        CoroutineScope(Dispatchers.IO).launch {
-            println("McDnsService, start registerService()")
-            if (!isRegistered) {
-                service.register()
-                isRegistered = true
-                println("McDnsService, service is registered")
-                println("   service type: ${service.type}")
-                println("   service name: ${service.name}")
-            }
+        println("McDnsService, start registerService()")
+        if (!isRegistered) {
+            service.register()
+            isRegistered = true
+            println("McDnsService, service is registered")
+            println("   service type: ${service.type}")
+            println("   service name: ${service.name}")
         }
     }
 
