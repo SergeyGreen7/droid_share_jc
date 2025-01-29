@@ -1,29 +1,16 @@
 package org.example.project
 
-import WinBleNativeApi
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
-import androidx.compose.material.Button
-import androidx.compose.material.Text
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-// import com.darkrockstudios.libraries.mpfilepicker.FilePicker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.example.project.connection.mcdns.McDnsScanner
-import org.example.project.connection.mcdns.McDnsService
 import org.example.project.data.DeviceInfoCommon
 import org.example.project.utils.NotificationInterface
 import org.example.project.fragments.FileSharingRole
@@ -39,8 +26,6 @@ import org.example.project.ui.shouldShowAlertDialog
 import org.example.project.ui.shouldShowProgressDialog
 import org.example.project.ui.showSnackbar
 import org.example.project.ui.snackbarMessage
-
-// import org.example.project.ui.GetAndroidMainView_main
 
 private val notifier = object: NotificationInterface {
     override suspend fun updateProgressDialog(progress: Float) {
@@ -131,7 +116,7 @@ fun main() = application {
 @Composable
 fun App2() {
 
-    var fileShareBlock by remember { mutableStateOf(
+    val fileShareBlock by remember { mutableStateOf(
         FileShareBlockDesktop(
             FileSharingRole.FILE_RECEIVER, "C:/Users/Sergey/Downloads/fs_test/"
         )
