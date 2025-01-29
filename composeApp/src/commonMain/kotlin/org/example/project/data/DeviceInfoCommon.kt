@@ -9,29 +9,21 @@ enum class InfoType {
     BLE
 }
 
-enum class ConnectionState {
-    DISCONNECTED,
-    CONNECTED
-}
-
 open class DeviceInfoCommon {
     var type: InfoType = InfoType.TEST
-    lateinit var deviceName: String
-    lateinit var deviceInfo: String
-    lateinit var deviceAddress: String
-    lateinit var state: ConnectionState
+    var deviceName: String
+    var deviceInfo: String
+    var deviceAddress: String
 
     constructor() {
         deviceName      = "not defined name"
         deviceInfo      = "not defined info"
         deviceAddress   = "not defined info"
-        state           = ConnectionState.DISCONNECTED
     }
 
     constructor(name: String, info: String) {
         deviceName      = name
         deviceInfo      = info
         deviceAddress   = info
-        state           = ConnectionState.DISCONNECTED
     }
 }

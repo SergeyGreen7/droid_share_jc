@@ -1,4 +1,4 @@
-package org.example.project.connection.mtdns
+package org.example.project.connection.mcdns
 
 //import android.annotation.SuppressLint
 //import android.net.nsd.NsdManager
@@ -19,9 +19,7 @@ class McDnsService (
     companion object {
         const val SERVICE_NAME = "NSD_AQUARIUS"
         const val SERVICE_TYPE = "_aq_fs_service._tcp"
-        // const val NSD_PROTOCOL = NsdManager.PROTOCOL_DNS_SD
 
-        private const val TAG = "LnsService"
         private const val SERVICE_PORT = 8889
     }
 
@@ -44,10 +42,6 @@ class McDnsService (
             println("   service type: ${service.type}")
             println("   service name: ${service.name}")
         }
-    }
-
-    fun getPort(): Int {
-        return SERVICE_PORT
     }
 
     fun unregisterService() {

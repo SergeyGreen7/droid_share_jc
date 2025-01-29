@@ -1,8 +1,5 @@
 package org.example.project.data
 
-//import org.example.project.utils.DataConverter
-//import org.example.project.data.FileManager
-//import org.example.project.NotificationInterface
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -13,9 +10,9 @@ import org.example.project.utils.DataTransferStatus
 import org.example.project.utils.MessageType
 import org.example.project.utils.NotificationInterface
 import org.example.project.utils.RxFileDescriptor
-import org.example.project.utils.RxFilePackDescriptor
+import org.example.project.utils.RxFilesDescriptor
 import org.example.project.utils.TxFileDescriptor
-import org.example.project.utils.TxFilePackDescriptor
+import org.example.project.utils.TxFilesDescriptor
 import org.example.project.utils.isMessageControl
 import java.io.IOException
 import java.io.InputStream
@@ -30,9 +27,6 @@ class DataTransceiver(
 ) {
 
     companion object {
-        private const val TAG = "DataTransceiver"
-
-        const val PORT_NUMBER = 8888
         const val NUM_BYTES_PER_SIZE = 4
         const val CHUNK_SIZE = 4096
 //         const val CHUNK_SIZE = 4096 * 4096
@@ -46,8 +40,8 @@ class DataTransceiver(
         private val rxBuffer = ByteArray(CHUNK_SIZE)
     }
 
-    var txState = DataTransferState.IDLE
-    var rxState = DataTransferState.IDLE
+    private var rxState = DataTransferState.IDLE
+    private var txState = DataTransferState.IDLE
 
     private var inputStream: InputStream? = null
     private var outputStream: OutputStream? = null
@@ -55,13 +49,13 @@ class DataTransceiver(
     private var receptionProgressValue = 0f
     private var cancellationAfterRequestFlag = false
 
-    private var txFilePackDscr: TxFilePackDescriptor? = null
-    private var rxFilePackDscr: RxFilePackDescriptor? = null
+    private var txFilePackDscr: TxFilesDescriptor? = null
+    private var rxFilePackDscr: RxFilesDescriptor? = null
 
-    private lateinit var fm: FileManager
+    private var fileManager: FileManager
 
     init {
-      fm = FileManager(saveFileDir)
+      fileManager = FileManager(saveFileDir)
     }
 
     fun shutdown() {
@@ -70,18 +64,12 @@ class DataTransceiver(
     }
 
     fun setStreams(inStream: InputStream, outStream : OutputStream) {
-//        val inputFlow = inStream.bufferedReader().lineSequence().asFlow()
-//
-//        inputFlow.collectLatest { it->
-//            println("setStreams(), ut: $it")
-//        }
-
         println("start setStreams()")
         inputStream = inStream
         outputStream = outStream
     }
 
-    suspend fun initiateDataTransmission(filePack: TxFilePackDescriptor) {
+    fun initiateDataTransmission(filePack: TxFilesDescriptor) {
         println("start initiateDataTransmission, filePack.isEmpty() = ${filePack.isEmpty()}")
         println("start initiateDataTransmission, " +
                 "cancellationAfterRequestFlag = $cancellationAfterRequestFlag")
@@ -91,16 +79,6 @@ class DataTransceiver(
 
         txState = DataTransferState.READY_TO_TRANSMIT
 
-//        notifier.showProgressDialog("Sending data", "Sending data 0.00 %") { dialog, _ ->
-//            CoroutineScope(Dispatchers.IO).launch {
-//                sendCancelTx()
-//                notifier.disconnect()
-//            }
-//            notifier.showNotification("Data transmission is canceled")
-//
-//            dialog.dismiss()
-//        }
-
         sendTxRequest()
         if (cancellationAfterRequestFlag) {
             cancellationAfterRequestFlag = false
@@ -108,7 +86,7 @@ class DataTransceiver(
         }
     }
 
-    private suspend fun sendReceptionProgress(rxProgress: String) {
+    private fun sendReceptionProgress(rxProgress: String) {
         if (outputStream == null) {
             return
         }
@@ -123,16 +101,23 @@ class DataTransceiver(
     fun cancelDataTransmission() {
         println("start cancelDataTransmission(), txState = $txState")
 
-        if (txState == DataTransferState.IDLE) {
-            cancellationAfterRequestFlag = true
-        } else if (txState == DataTransferState.READY_TO_TRANSMIT) {
-            txState = DataTransferState.IDLE
-            sendCancelTx()
-            CoroutineScope(Dispatchers.IO).launch {
-                notifier.cancelConnection()
+        when (txState) {
+            DataTransferState.IDLE -> {
+                cancellationAfterRequestFlag = true
             }
-        } else if (txState == DataTransferState.ACTIVE) {
-            txState = DataTransferState.CANCEL_BY_TX
+            DataTransferState.READY_TO_TRANSMIT -> {
+                txState = DataTransferState.IDLE
+                sendCancelTx()
+                CoroutineScope(Dispatchers.IO).launch {
+                    notifier.cancelConnection()
+                }
+            }
+            DataTransferState.ACTIVE -> {
+                txState = DataTransferState.CANCEL_BY_TX
+            }
+            else -> {
+                error("Wrong txState")
+            }
         }
     }
 
@@ -167,9 +152,6 @@ class DataTransceiver(
         if (outputStream == null) {
             return
         }
-//        val outputStream = withContext(Dispatchers.IO) {
-//            client.getOutputStream()
-//        }
         println("sending message type: $type")
         writeMessageType(type)
         flushOutput()
@@ -182,10 +164,6 @@ class DataTransceiver(
             txFilePackDscr!!.isEmpty() ) {
             return
         }
-
-//        val outputStream = withContext(Dispatchers.IO) {
-//            client.getOutputStream()
-//        }
 
         sendFilePackDscr()
 
@@ -296,7 +274,7 @@ class DataTransceiver(
         {
             rxState = DataTransferState.ACTIVE
 
-            rxFilePackDscr = RxFilePackDescriptor()
+            rxFilePackDscr = RxFilesDescriptor()
             rxFilePackDscr!!.sizeTotal = readSize()
             rxFilePackDscr!!.numFiles = readSize()
             println("rxFilePackDscr.sizeTotal = ${rxFilePackDscr!!.sizeTotal}")
@@ -319,20 +297,19 @@ class DataTransceiver(
             throw Exception("File reception on rx state = $rxState")
         }
 
-        val rxFileDscr = RxFileDescriptor()
-        rxFileDscr.fileNameReceived = readStringUtf8()
-        if (rxFileDscr.fileNameReceived.isEmpty()) {
+        val fileNameReceived = readStringUtf8()
+        val fileNameSaved = fileManager.getSaveFileName(fileNameReceived)
+        val fileSize = readSize()
+        if (fileNameReceived.isEmpty()) {
             throw Exception("empty file name")
         }
-        println("rxFileDscr.fileNameReceived = ${rxFileDscr.fileNameReceived}")
-        rxFileDscr.fileNameSaved = fm.getSaveFileName(rxFileDscr.fileNameReceived)
-        println("rxFileDscr.fileNameSaved = ${rxFileDscr.fileNameSaved}")
-        rxFileDscr.fileSize = readSize()
-        println("rxFileDscr.fileSize = ${rxFileDscr.fileSize}")
 
-        println("receiving file: '${rxFileDscr.fileNameReceived}', file size: ${rxFileDscr.fileSize}")
+        val rxFileDscr = RxFileDescriptor(fileNameReceived, fileNameSaved, fileSize)
+        println("fileNameReceived = ${rxFileDscr.fileNameReceived}")
+        println("fileNameSaved = ${rxFileDscr.fileNameSaved}")
+        println("fileSize = ${rxFileDscr.fileSize}")
 
-        val outputFileStream = fm.getOutFileStream(rxFileDscr.fileNameSaved)
+        val outputFileStream = fileManager.getOutFileStream(rxFileDscr.fileNameSaved)
         when (copyStreamToData(outputFileStream, rxFileDscr.fileSize)) {
             DataTransferStatus.DONE -> {
                 println("the file '${{rxFileDscr.fileNameReceived}}' is received")
@@ -354,8 +331,8 @@ class DataTransceiver(
                 println("File transferring '${rxFileDscr.fileNameReceived}' is canceled by transmitter side")
                 notifier.showNotification("Data transmission is canceled by transmitter")
                 notifier.dismissProgressDialog()
-                fm.deleteReceivedFiles(rxFilePackDscr!!.dscrs)
-                fm.deleteFile(rxFileDscr.fileNameReceived)
+                fileManager.deleteReceivedFiles(rxFilePackDscr!!.dscrs)
+                fileManager.deleteFile(rxFileDscr.fileNameReceived)
                 rxState = DataTransferState.IDLE
                 CoroutineScope(Dispatchers.IO).launch {
                     notifier.cancelConnection()
@@ -365,8 +342,8 @@ class DataTransceiver(
                 println("File transferring '${rxFileDscr.fileNameReceived}' is canceled by receiver side")
                 notifier.showNotification("Data transmission is canceled by receiver")
                 notifier.dismissProgressDialog()
-                fm.deleteReceivedFiles(rxFilePackDscr!!.dscrs)
-                fm.deleteFile(rxFileDscr.fileNameReceived)
+                fileManager.deleteReceivedFiles(rxFilePackDscr!!.dscrs)
+                fileManager.deleteFile(rxFileDscr.fileNameReceived)
                 rxState = DataTransferState.IDLE
                 CoroutineScope(Dispatchers.IO).launch {
                     notifier.cancelConnection()
@@ -374,7 +351,7 @@ class DataTransceiver(
             }
             DataTransferStatus.ERROR -> {
                 println("unknown data transfer status error during data reception")
-                fm.deleteFile(rxFileDscr.fileNameReceived)
+                fileManager.deleteFile(rxFileDscr.fileNameReceived)
                 CoroutineScope(Dispatchers.IO).launch {
                     notifier.cancelConnection()
                 }
@@ -451,7 +428,7 @@ class DataTransceiver(
         }
     }
 
-    private suspend fun receiveAcceptTx() {
+    private fun receiveAcceptTx() {
         println("receive accept tx, txState = $txState")
         if (txState == DataTransferState.READY_TO_TRANSMIT) {
             txState = DataTransferState.ACTIVE
@@ -472,7 +449,7 @@ class DataTransceiver(
         }
     }
 
-    suspend fun transmissionFlow(txFilePack: TxFilePackDescriptor) {
+    fun transmissionFlow(txFilePack: TxFilesDescriptor) {
         if (txFilePack.isNotEmpty()) {
             CoroutineScope(Dispatchers.IO).launch {
                 initiateDataTransmission(txFilePack)
@@ -648,12 +625,10 @@ class DataTransceiver(
     }
 
     private fun getDataTransferStatus(state: DataTransferState) : DataTransferStatus {
-        if (state == DataTransferState.CANCEL_BY_TX) {
-            return DataTransferStatus.CANCELED_BY_TX
-        } else if (state == DataTransferState.CANCEL_BY_RX) {
-            return DataTransferStatus.CANCELED_BY_RX
-        } else {
-            return DataTransferStatus.ERROR
+        return when (state) {
+            DataTransferState.CANCEL_BY_TX -> DataTransferStatus.CANCELED_BY_TX
+            DataTransferState.CANCEL_BY_RX -> DataTransferStatus.CANCELED_BY_RX
+            else -> DataTransferStatus.ERROR
         }
     }
 }

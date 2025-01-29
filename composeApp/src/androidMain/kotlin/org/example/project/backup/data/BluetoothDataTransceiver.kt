@@ -8,16 +8,23 @@ import android.util.Log
 import org.example.project.connection.BluetoothController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import org.example.project.data.BaseDataTransceiver
 import org.example.project.data.DataTransceiver
 import org.example.project.utils.NotificationInterface
+import org.example.project.utils.TxFilesDescriptor
 import java.util.UUID
 
 class BluetoothDataTransceiver(
     private var notifier : NotificationInterface
-) : BaseDataTransceiver()
-{
+) {
+
+    private var socketJob: Job? = null
+    private var rxJob: Job? = null
+    private var txJob: Job? = null
+
+    private var dataTransceiver: DataTransceiver? = null
+    private var txFilePack: TxFilesDescriptor? = null
 
     companion object {
         private const val TAG = "BluetoothDataTransceiver"
@@ -86,5 +93,31 @@ class BluetoothDataTransceiver(
             dataTransceiver!!.shutdown()
             bltClientServer!!.shutdown()
         }
+    }
+
+    private fun isJobActive(job: Job?) : Boolean {
+        return (job != null) && job.isActive
+    }
+
+    fun sendData(filePack: TxFilesDescriptor) {
+        CoroutineScope(Dispatchers.IO).launch {
+            dataTransceiver!!.initiateDataTransmission(filePack)
+        }
+    }
+
+    private fun stopActiveJobs() {
+        if (isJobActive(socketJob)) {
+            println("stopActiveJobs, stop socketJob")
+            socketJob!!.cancel()
+        }
+        if (isJobActive(txJob)) {
+            println("stopActiveJobs, stop txJob")
+            txJob!!.cancel()
+        }
+        if (isJobActive(rxJob)) {
+            println("stopActiveJobs, stop rxJob")
+            rxJob!!.cancel()
+        }
+
     }
 }

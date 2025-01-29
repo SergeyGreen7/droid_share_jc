@@ -22,8 +22,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.example.project.connection.mtdns.McDnsScanner
-import org.example.project.connection.mtdns.McDnsService
+import org.example.project.connection.mcdns.McDnsScanner
+import org.example.project.connection.mcdns.McDnsService
 import org.example.project.data.DeviceInfoCommon
 import org.example.project.utils.NotificationInterface
 import org.example.project.fragments.FileSharingRole
@@ -68,10 +68,10 @@ private val notifier = object: NotificationInterface {
     }
 
     override fun showNotification(message: String) {
-        CoroutineScope(Dispatchers.Main).launch {
+//        CoroutineScope(Dispatchers.Main).launch {
             snackbarMessage.value = message
             showSnackbar.value = true
-        }
+//        }
     }
 
     override suspend fun showAlertDialog(
@@ -109,10 +109,6 @@ private val notifier = object: NotificationInterface {
             org.example.project.ui.deviceList.add(it)
         }
     }
-
-//        override fun onWifiP2pConnection(info: WifiP2pInfo) {
-//            TODO("Not yet implemented")
-//        }
 }
 
 fun main() = application {
@@ -129,132 +125,6 @@ fun main() = application {
         App2()
         // getView()
         // helloWorld4()
-    }
-}
-
-@Composable
-fun App1() {
-
-    val service by remember { mutableStateOf(McDnsService("desktop-")) }
-    var buttonServiceText by remember { mutableStateOf("Start DNS SD Service") }
-    val scanner by remember { mutableStateOf(McDnsScanner()) }
-    var buttonScannerText by remember { mutableStateOf("Start DNS SD Scanner") }
-
-    var buttonBleMethodText by remember { mutableStateOf("Start BLE Method") }
-    var buttonBleServiceText by remember { mutableStateOf("Start BLE Service") }
-    var buttonBleScannerText by remember { mutableStateOf("Start BLE Scanner") }
-
-    var showFilePicker by remember { mutableStateOf(false) }
-    val fileType = listOf("jpg", "png")
-
-//    val callbacks = object : BleCallbackInterface {
-//        override fun method() {
-//            println("method()")
-//        }
-//        override fun CallbackOnReferenceDataReception(flag: Boolean, name: String) {
-//            println("CallbackOnReferenceDataReception(), flag = " +
-//                        (if (flag) "true" else "false") + ", name = " + name
-//            )
-//        }
-//        override fun CallbackOnDataSend(flag: Boolean) {
-//            println("CallbackOnDataSend(), flag = " +
-//                        (if (flag) "true" else "false")
-//            )
-//        }
-//
-//        override fun showDiscoveredDevices(p0: Array<out String>?, p1: Array<out String>?) {
-//            if (p0 == null || p1 == null) {
-//                return
-//            }
-//
-//            for (i in p0.indices) {
-//                println("name: ${p0[i]}, address: ${p1[i]}")
-//            }
-//        }
-//    }
-    val winBle by remember { mutableStateOf(WinBleNativeApi()) }
-
-//    val gattScanner by remember { mutableStateOf(DesktopGattScanner()) }
-//    var gattScannerText by remember { mutableStateOf("Start Gatt Scanner") }
-
-    Column {
-//        Row() {
-//            Button(
-//                onClick = {
-//                    winBle.runBleMethod()
-//                }
-//            ) {
-//                Text(text = buttonBleMethodText)
-//            }
-//            Spacer(modifier = Modifier.width(50.dp))
-//            Button(
-//                onClick = {
-//                    if (buttonBleScannerText == "Start BLE Scanner") {
-//                        buttonBleScannerText = "Stop BLE Scanner"
-//                        winBle.runBleScanner()
-//                    } else {
-//                        buttonBleScannerText = "Start BLE Scanner"
-//                        winBle.stopBleScanner()
-//                    }
-//                }
-//            ) {
-//                Text(text = buttonBleScannerText)
-//            }
-//            Spacer(modifier = Modifier.width(50.dp))
-//            Button(
-//                onClick = {
-//                    if (buttonBleServiceText == "Start BLE Service") {
-//                        buttonBleServiceText = "Stop BLE Service"
-//                        winBle.runBleService()
-//                    } else {
-//                        buttonBleServiceText = "Start BLE Service"
-//                        winBle.stopBleService()
-//                    }
-//                }
-//            ) {
-//                Text(text = buttonBleServiceText)
-//            }
-//        }
-        Spacer(modifier = Modifier.height(25.dp))
-        Button(
-            onClick = {
-                showFilePicker = !showFilePicker
-            }
-        ) {
-            Text(text = "Select file")
-        }
-        Spacer(modifier = Modifier.height(25.dp))
-        Row() {
-            Button(
-                onClick = {
-                    if (buttonServiceText == "Start DNS SD Service") {
-                        buttonServiceText = "Stop DNS SD Service";
-                        CoroutineScope(Dispatchers.IO).launch {
-                            service.registerService()
-                        }
-                    } else {
-                        buttonServiceText = "Start DNS SD Service";
-                        service.unregisterService()
-                    }
-                }
-            ) {
-                Text(text = buttonServiceText)
-            }
-            Spacer(modifier = Modifier.width(100.dp))
-            Button(
-                onClick = {
-                    if (buttonScannerText == "Start DNS SD Scanner") {
-                        buttonScannerText = "Stop DNS SD Scanner";
-                        scanner.startScan()
-                    } else {
-                        buttonScannerText = "Start DNS SD Scanner";
-                        scanner.stopScan()
-                    }
-                }
-            ) {
-                Text(text = buttonScannerText)
-            }
-        }
     }
 }
 

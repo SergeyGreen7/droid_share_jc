@@ -1,7 +1,7 @@
 package org.example.project.utils
 
 import org.example.project.data.DeviceInfoCommon
-
+import java.util.UUID
 
 interface NotificationInterface {
     suspend fun showProgressDialog(title: String,
@@ -16,5 +16,27 @@ interface NotificationInterface {
     fun cancelConnection()
     suspend fun disconnect()
     fun onDeviceListUpdate(deviceList: List<DeviceInfoCommon>)
-    // fun onWifiP2pConnection(info: WifiP2pInfo)
+}
+
+interface BleScannerInterface {
+    fun setServiceUuid(uuid: UUID)
+    fun startScan()
+    fun stopScan()
+}
+
+interface BleServiceInterface {
+    var referenceData: String
+    var callbackOnReferenceDataReception: (flag: Boolean, name: String) -> Unit
+    fun setServiceUuid(uuid: UUID)
+    fun setCharacteristicUuid(uuid: UUID)
+    fun startService()
+    fun stopService()
+}
+
+interface BleClientInterface {
+    var dataToSend: String
+    var callbackOnDataSend: (flag: Boolean) -> Unit
+    fun setServiceUuid(uuid: UUID)
+    fun setCharacteristicUuid(uuid: UUID)
+    fun disconnect()
 }

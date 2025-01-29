@@ -2,11 +2,11 @@ package org.example.project.utils
 
 import java.io.InputStream
 
-class RxFileDescriptor {
-    var fileNameReceived = ""
-    var fileNameSaved = ""
-    var fileSize = 0
-}
+data class RxFileDescriptor (
+    val fileNameReceived: String,
+    val fileNameSaved: String,
+    val fileSize: Int
+) {}
 
 data class TxFileDescriptor(
     val fileName: String,
@@ -14,12 +14,12 @@ data class TxFileDescriptor(
     val inputStream: InputStream
 ) {}
 
-class TxFilePackDescriptor() {
+class TxFilesDescriptor() {
     var size = 0
     var dscrs  = mutableListOf<TxFileDescriptor>()
 
-    fun copy(): TxFilePackDescriptor {
-        val copy = TxFilePackDescriptor()
+    fun copy(): TxFilesDescriptor {
+        val copy = TxFilesDescriptor()
         copy.size = this.size
         copy.dscrs = this.dscrs.toMutableList()
         return copy
@@ -48,7 +48,7 @@ class TxFilePackDescriptor() {
     }
 }
 
-class RxFilePackDescriptor() {
+class RxFilesDescriptor() {
     var numFiles = 0
     var sizeTotal = 0
     var sizeReceived = 0

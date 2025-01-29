@@ -7,10 +7,10 @@ import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
 
-open class TcpP2pConnector {
+class TcpP2pClientServer {
 
-    protected var client: Socket? = null
-    protected var server: ServerSocket? = null
+    private var client: Socket? = null
+    private var server: ServerSocket? = null
 
     fun shutdown() {
         try {
@@ -27,6 +27,10 @@ open class TcpP2pConnector {
         }
 
         println("TcpP2pConnector, shutdown(), isSocketCreated() = ${isSocketCreated()}")
+    }
+
+    fun isSocketNotCreated(): Boolean {
+        return !isSocketCreated()
     }
 
     fun isSocketCreated(): Boolean {
@@ -59,14 +63,6 @@ open class TcpP2pConnector {
 
     fun isClientConnected(): Boolean {
         return client != null && client!!.isConnected && !client!!.isClosed
-    }
-
-    fun isConnectionEstablished(): Boolean {
-        return if (server != null) {
-            isServerOpened() && isClientConnected()
-        } else {
-            isClientConnected()
-        }
     }
 
     fun createClient(address: InetAddress, port: Int, timeout: Int) {

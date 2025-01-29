@@ -1,4 +1,4 @@
-package org.example.project.connection.mtdns
+package org.example.project.connection.mcdns
 
 import com.appstractive.dnssd.DiscoveredService
 import com.appstractive.dnssd.DiscoveryEvent
@@ -8,41 +8,25 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import org.example.project.connection.mtdns.McDnsService.Companion.SERVICE_TYPE
-import java.util.concurrent.atomic.AtomicBoolean
+import org.example.project.connection.mcdns.McDnsService.Companion.SERVICE_TYPE
 import java.util.regex.Pattern
 
-class McDnsScanner (
-    // private val manager: NsdManager,
-    // private val notifier: NotificationInterface
-)
-{
-    companion object {
-        private const val TAG = "McDnsScanner"
-    }
+class McDnsScanner {
 
-    private var isActive = false
     private var callbackIsUsed = false
     private var showResolvedServices = true
-    private var resolveListenerBusy = AtomicBoolean(false)
-//    private var pendingNsdServices = ConcurrentLinkedQueue<NsdServiceInfo>()
 
     private var scanJob: Job? = null
     private var scannedServices = mutableMapOf<String, DiscoveredService>()
 
-//    private var services = HashMap<String, NsdServiceInfo>()
     var referenceServiceName = ""
     var callbackOnRefServiceFind: ((serviceInfo: DiscoveredService)-> Unit)? = null
 
-    lateinit private var addressPattern: Pattern
-
-    init {
-        addressPattern = Pattern.compile(
-            "((25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\\." +
-            "(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\." +
-            "(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\." +
-            "(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9]))");
-    }
+    private var addressPattern: Pattern = Pattern.compile(
+        "((25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\\." +
+        "(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\." +
+        "(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\." +
+        "(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9]))")
 
     fun startScan() {
         callbackIsUsed = false
@@ -59,7 +43,6 @@ class McDnsScanner (
                     is DiscoveryEvent.Discovered -> {
                         CoroutineScope(Dispatchers.IO).launch {
                             println("discovered service ${it.service.key} - ${it.service}")
-                            // scannedServices[it.service.key] = it.service
                             it.resolve()
                         }
                     }
@@ -76,18 +59,18 @@ class McDnsScanner (
                             println("resolved service ${it.service.key} - ${it.service}")
                             scannedServices[it.service.key] = it.service
 
-                            // Matcher matcher = IP_ADDRESS.matcher("127.0.0.1");
-                            var flag = false
+                            var matchFlag = false
                             it.service.addresses.forEach({ address ->
                                 if (addressPattern.matcher(address).matches()) {
                                     println("address $address is a correct IP address")
-                                    flag = true
+                                    matchFlag = true
                                 } else {
                                     println("address $address is not a correct IP address")
                                 }
                             })
+                            matchFlag = matchFlag && !callbackIsUsed
 
-                            if (referenceServiceName.isNotEmpty() && flag && !callbackIsUsed) {
+                            if (referenceServiceName.isNotEmpty() && matchFlag) {
                                 if (referenceServiceName == it.service.name) {
                                     callbackIsUsed = true
                                     callbackOnRefServiceFind?.invoke(it.service)
