@@ -21,7 +21,7 @@ class P2pConnectionManager(
     private var txJob: Job? = null
 
     private var dataTransceiver: DataTransceiver = DataTransceiver(notifier, saveFileDir)
-    private var txFiles: TxFilesDescriptor = TxFilesDescriptor()
+    // private var txFiles: TxFilesDescriptor = TxFilesDescriptor()
     private var clientServer: TcpP2pClientServer = TcpP2pClientServer()
 
     fun cancelDataTransmission() {
@@ -63,13 +63,13 @@ class P2pConnectionManager(
             if (clientServer.isClientConnected()) {
                 println("wifiClientServer!!.isSocketCreated() = true")
 
-                dataTransceiver.setStreams(
+                dataTransceiver.configureStreams(
                     clientServer.getInputStream(),
                     clientServer.getOutputStream()
                 )
 
                 rxJob = CoroutineScope(Dispatchers.IO).launch {
-                    dataTransceiver.receptionFlow()
+                    dataTransceiver.startReceptionFlow()
                 }
             }
         } else {
@@ -78,11 +78,9 @@ class P2pConnectionManager(
     }
 
     fun destroySocket() {
-        println("NsdDataTransceiver, destroySocket(), run stopActiveJobs()")
+        println("start destroySocket()")
+        dataTransceiver.reset()
         stopActiveJobs()
-        println("NsdDataTransceiver, destroySocket(), run dataTransceiver!!.shutdown()")
-        dataTransceiver.shutdown()
-        println("NsdDataTransceiver, destroySocket(), run tcpP2pConnector!!.shutdown()")
         clientServer.shutdown()
     }
 
@@ -92,10 +90,14 @@ class P2pConnectionManager(
             return
         }
 
-        this.txFiles = txFiles.copy()
         txJob = CoroutineScope(Dispatchers.IO).launch {
+            println("sendData(), start txJob, txFiles.isNotEmpty() = ${txFiles.isNotEmpty()}")
             dataTransceiver.transmissionFlow(txFiles)
         }
+    }
+
+    fun setTransmitterName(name: String) {
+        dataTransceiver.setTransmitterName(name)
     }
 
     private fun isJobActive(job: Job?) : Boolean {
@@ -104,16 +106,16 @@ class P2pConnectionManager(
 
     private fun stopActiveJobs() {
         if (isJobActive(socketJob)) {
-            println("stopActiveJobs, stop socketJob")
             socketJob?.cancel()
+            println("stopActiveJobs, stop socketJob")
         }
         if (isJobActive(txJob)) {
-            println("stopActiveJobs, stop txJob")
             txJob?.cancel()
+            println("stopActiveJobs, stop txJob")
         }
         if (isJobActive(rxJob)) {
-            println("stopActiveJobs, stop rxJob")
             rxJob?.cancel()
+            println("stopActiveJobs, stop rxJob")
         }
 
     }

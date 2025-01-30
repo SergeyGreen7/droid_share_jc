@@ -1,7 +1,7 @@
 package org.example.project.fragments
 
 import com.appstractive.dnssd.DiscoveredService
-import com.darkrockstudios.libraries.mpfilepicker.MPFile
+import io.github.vinceglb.filekit.core.PlatformFiles
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -11,6 +11,7 @@ import org.example.project.utils.NotificationInterface
 import org.example.project.data.P2pConnectionManager
 import org.example.project.utils.TxFilesDescriptor
 import org.example.project.ui.bleButtonVisible
+import org.example.project.ui.bleScannerButtonText
 import org.example.project.utils.BleClientInterface
 import org.example.project.utils.BleScannerInterface
 import org.example.project.utils.BleServiceInterface
@@ -23,7 +24,7 @@ enum class FileSharingRole {
 }
 
 abstract class FileShareBlockCommon (
-    protected val role: FileSharingRole,
+    private var role: FileSharingRole,
     private val saveFileDir: String,
 ) {
 
@@ -39,17 +40,20 @@ abstract class FileShareBlockCommon (
 
     private lateinit var mcDnsScanner: McDnsScanner
 
-    private lateinit var dataTransceiver: P2pConnectionManager
+    protected lateinit var connectionManager: P2pConnectionManager
 
     protected var txFiles = TxFilesDescriptor()
     protected open lateinit var notifier: NotificationInterface
     protected var selectedDeviceInfo: DeviceInfoCommon? = null
 
+    abstract fun config(notifier: NotificationInterface)
     abstract fun setMcDnsServiceName(name: String)
     abstract suspend fun registerMcDnsService()
     abstract fun unregisterMcDnsService()
-
     protected abstract fun connectBleClient(info: DeviceInfoCommon)
+
+    abstract val setDeviceInfoCommon: (device: DeviceInfoCommon, index: Int) -> Unit
+    abstract var getFileDescriptorFromPicker: (files: PlatformFiles?) -> Unit
 
     protected fun configureBle(
         bleScanner: BleScannerInterface,
@@ -63,7 +67,7 @@ abstract class FileShareBlockCommon (
     open fun onCreate() {
         println("FileShareFragment, start onCreate()")
 
-        dataTransceiver = P2pConnectionManager(notifier, saveFileDir)
+        connectionManager = P2pConnectionManager(notifier, saveFileDir)
 
         mcDnsScanner = McDnsScanner()
 
@@ -73,6 +77,7 @@ abstract class FileShareBlockCommon (
         bleService.setCharacteristicUuid(GATT_CHARACTER_SERVICE_CONFIG_UUID)
         bleScanner.setServiceUuid(GATT_SERVICE_UUID)
 
+        // Configure BLE service
         bleService.referenceData = REFERENCE_DATA
         bleService.callbackOnReferenceDataReception = { flag: Boolean, name:String ->
             println("start callbackOnDataReception(), flag = $flag, name = $name")
@@ -86,8 +91,39 @@ abstract class FileShareBlockCommon (
                         registerMcDnsService()
                     }.join()
 
-                    dataTransceiver.createServer(FS_SERVICE_PORT)
+                    connectionManager.createServer(FS_SERVICE_PORT)
                 }
+            }
+        }
+
+        // Configure BLE client
+        bleClient.callbackOnDataSend = { flag: Boolean ->
+            if (flag) {
+                notifier.showNotification("GATT data is sent")
+                bleClient.disconnect()
+
+                val id = bleClient.dataToSend.indexOf("@")
+                val serviceName = bleClient.dataToSend.substring(id+1)
+                println("run mcDnsScanner.scanForService(), serviceName = $serviceName")
+                mcDnsScanner.scanForService(serviceName)
+            } else {
+                notifier.showNotification("GATT data is failed to send")
+            }
+        }
+
+        // Configure MC DNS scanner
+        mcDnsScanner.callbackOnRefServiceFind = { service: DiscoveredService ->
+            println("run callbackOnRefServiceFind")
+            mcDnsScanner.stopScan()
+            CoroutineScope(Dispatchers.IO).launch {
+                connectionManager.createClient(
+                    service.port,
+                    InetAddress.getByName(service.addresses[0]))
+
+                println("run dataTransceiver.sendData(txFiles), " +
+                        "txFiles.isNotEmpty() = ${txFiles.isNotEmpty()}")
+                connectionManager.sendData(txFiles.clone())
+                txFiles.clear()
             }
         }
 
@@ -101,39 +137,40 @@ abstract class FileShareBlockCommon (
         }
     }
 
-    abstract fun config(notifier: NotificationInterface)
-
     protected fun disconnect() {
-        println("FileShareFragment, disconnect()")
-        bleScanner.stopScan()
-        dataTransceiver.destroySocket()
-        unregisterMcDnsService()
+        println("start disconnect()")
+//        when (role) {
+//            FileSharingRole.FILE_TRANSMITTER -> {
+//                stopBleScanner()
+//                mcDnsScanner.stopScan()
+//            }
+//            FileSharingRole.FILE_RECEIVER -> {
+//                unregisterMcDnsService()
+//            }
+//        }
+        stopBleScanner()
         mcDnsScanner.stopScan()
+        unregisterMcDnsService()
+        connectionManager.destroySocket()
     }
 
     protected fun cancelConnection() {
-        println("FileShareFragment, start cancelConnection(), role = $role")
-        dataTransceiver.destroySocket()
+        println("start cancelConnection(), role = $role")
+        connectionManager.destroySocket()
         when (role) {
             FileSharingRole.FILE_TRANSMITTER -> {
-                println("run bleScanner.startScan()")
-                bleScanner.startScan()
-                println("mcDnsScanner.stopScan()")
+                startBleScanner()
                 mcDnsScanner.stopScan()
             }
             FileSharingRole.FILE_RECEIVER -> {
-                println("mcDnsService.unregisterService()")
                 unregisterMcDnsService()
             }
         }
-        println("FileShareFragment, finish cancelConnection()")
     }
-
-    abstract val setDeviceInfoCommon: (device: DeviceInfoCommon, index: Int) -> Unit
-    abstract var getFileDescriptorFromPicker: ( files: List<MPFile<Any>>?) -> Unit
 
     val enableBleServiceCallback = { isEnabled: Boolean ->
         if (isEnabled) {
+            role = FileSharingRole.FILE_RECEIVER
             bleService.startService()
         } else {
             bleService.stopService()
@@ -143,56 +180,56 @@ abstract class FileShareBlockCommon (
 
     val enableBleScannerCallback = { isEnabled: Boolean ->
         if (isEnabled) {
-            bleScanner.startScan()
+            startBleScanner()
         } else {
-            bleScanner.stopScan()
+            stopBleScanner()
         }
     }
 
-    val sendDataCallback = {
-        if (selectedDeviceInfo != null) {
+    val sendDataCallback = sendDataCallback@ {
+        // CoroutineScope(Dispatchers.IO).launch {
+            if (selectedDeviceInfo == null) {
+                println("do return@sendDataCallback")
+                notifier.showNotification("Target device is not selected")
+                return@sendDataCallback
+            }
 
-            bleScanner.stopScan()
+            if (txFiles.isEmpty()) {
+                notifier.showNotification("Please select file(s) for transmission")
+                return@sendDataCallback
+            }
+
+            stopBleScanner()
             val info = selectedDeviceInfo!!
 
             CoroutineScope(Dispatchers.Main).launch {
-                notifier.showProgressDialog("Sending data" ) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        println("run cancelDataTransmission()")
-                        dataTransceiver.cancelDataTransmission()
-                    }
-                    notifier.showNotification("Data transmission is canceled")
+                notifier.showProgressDialog("Sending data") {
+                    stopDataTransmission()
                 }
             }
 
-            val serviceName = "$FS_SERVICE_NAME_BASE-${(Math.random() * 10000).toInt().toString()}"
+            val serviceName = "$FS_SERVICE_NAME_BASE-${(Math.random() * 10000).toInt()}"
             bleClient.dataToSend = "$REFERENCE_DATA@$serviceName"
-            bleClient.callbackOnDataSend = { flag: Boolean ->
-                if (flag) {
-                    notifier.showNotification("GATT data is sent")
-                    bleClient.disconnect()
-
-                    mcDnsScanner.referenceServiceName = serviceName
-                    mcDnsScanner.callbackOnRefServiceFind = { service: DiscoveredService ->
-                        println("run callbackOnRefServiceFind")
-                        mcDnsScanner.stopScan()
-                        CoroutineScope(Dispatchers.IO).launch {
-//                            delay(1000)
-                            dataTransceiver.createClient(
-                                service.port,
-                                InetAddress.getByName(service.addresses[0]))
-
-                            dataTransceiver.sendData(txFiles)
-                        }
-                    }
-
-                    println("run mcDnsScanner.scanForService(), serviceName = $serviceName")
-                    mcDnsScanner.scanForService(serviceName)
-                } else {
-                    notifier.showNotification("GATT data is failed to send")
-                }
-            }
             connectBleClient(info)
-        }
+//        }
+//        Unit
+    }
+
+    private fun startBleScanner() {
+            bleScannerButtonText.value = "Turn Scanner OFF"
+            bleScanner.startScan()
+    }
+
+    private fun stopBleScanner() {
+        bleScannerButtonText.value = "Turn Scanner ON"
+        bleScanner.stopScan()
+    }
+    private fun stopDataTransmission() {
+        // CoroutineScope(Dispatchers.IO).launch {
+            println("run cancelDataTransmission()")
+            connectionManager.cancelDataTransmission()
+        // }
+        notifier.showNotification("Data transmission is canceled")
     }
 }
+

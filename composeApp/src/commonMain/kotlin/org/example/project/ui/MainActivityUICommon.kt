@@ -5,13 +5,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.material.Button
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -22,8 +23,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.darkrockstudios.libraries.mpfilepicker.MPFile
-import com.darkrockstudios.libraries.mpfilepicker.MultipleFilePicker
+import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
+import io.github.vinceglb.filekit.core.PickerMode
+import io.github.vinceglb.filekit.core.PlatformFiles
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,13 +40,15 @@ var nameStr = mutableStateOf("")
 var fileStr = mutableStateOf("file(s) not selected")
 var deviceList = mutableStateListOf<DeviceInfoCommon>()
 
+var bleScannerButtonText = mutableStateOf("Turn Scanner ON")
+
 @Composable
 fun GetMainView(
     bleServiceCallback: (isEnabled:Boolean) -> Unit,
     bleScannerCallback: (isEnabled:Boolean) -> Unit,
     sendDataCallback: () -> Unit,
     setDeviceInfoCallback: (device: DeviceInfoCommon, index: Int) -> Unit,
-    createFileDscrList: (files: List<MPFile<Any>>?) -> Unit
+    createFileDscrList: (files: PlatformFiles?) -> Unit
 ) {
     MyAlertDialog()
     MyProgressDialog()
@@ -59,7 +63,7 @@ fun GetMainView(
             createFileDscrList)
     }
 
-    SnackBars(true, 3000)
+    ShowSnackBar(true, 3000)
 }
 
 @Composable
@@ -67,33 +71,32 @@ fun GetButtons(
     bleEnableServiceCallback: (isEnabled:Boolean) -> Unit,
     bleEnableScannerCallback: (isEnabled:Boolean) -> Unit,
     sendDataCallback: () -> Unit,
-    createFileDscrList: (files: List<MPFile<Any>>?) -> Unit
+    createFileDscrList: (files: PlatformFiles?) -> Unit
 ) {
-    val enableBleServiceStr = "Enable BLE Service"
-    val disableBleServiceStr = "Disable BLE Service"
-    val enableBleScannerStr = "Enable BLE Scanner"
-    val disableBleScannerStr = "Disable BLE Scanner"
+    val enableBleServiceStr = "Enable Receiver"
+    val disableBleServiceStr = "Disable Receiver"
+    // val enableBleScannerStr = "Enable BLE Scanner"
+    // val disableBleScannerStr = "Disable BLE Scanner"
 
-    val bleButtonVisible by remember { mutableStateOf(bleButtonVisible) }
+    // val bleButtonVisible by remember { mutableStateOf(bleButtonVisible) }
     var bleServiceEnabled by remember{ bleServiceEnabled }
     var bleScannerEnabled by remember{ bleScannerEnabled }
     val nameStr by remember{ nameStr }
     val fileStr by remember{ fileStr }
     var bleServiceButtonText by remember{ mutableStateOf(enableBleServiceStr) }
-    var bleScannerButtonText by remember{ mutableStateOf(enableBleScannerStr) }
+    val bleScannerButtonText by remember{ mutableStateOf(bleScannerButtonText) }
 
     // tmp
+    val showDebugButtons = false
     var scannerButtonText by remember { mutableStateOf("Start MC DNS Discovery") }
-    var serviceScanner by remember { mutableStateOf(McDnsScanner()) }
-    var servciceButtonText by remember { mutableStateOf("Start MC DNS Service") }
-    var service by remember { mutableStateOf(McDnsService("android-")) }
+    val serviceScanner by remember { mutableStateOf(McDnsScanner()) }
+    var serviceButtonText by remember { mutableStateOf("Start MC DNS Service") }
+    val service by remember { mutableStateOf(McDnsService("android-")) }
 
-    var showFilePicker by remember { mutableStateOf(false) }
 
-    val fileType = listOf("jpg", "png")
-    MultipleFilePicker(show = showFilePicker, fileExtensions = fileType) { file ->
-        showFilePicker = false
-        createFileDscrList(file)
+    val filePicker = rememberFilePickerLauncher(mode = PickerMode.Multiple()) { files ->
+        println("launcher, files = $files")
+        createFileDscrList(files)
     }
 
     Column(
@@ -102,7 +105,7 @@ fun GetButtons(
         Row {
             Button(
                 onClick = {
-                    showFilePicker = !showFilePicker
+                    filePicker.launch()
                 },
             ) {
                 Text(text = "Select file")
@@ -110,10 +113,10 @@ fun GetButtons(
             Spacer(modifier = Modifier.width(20.dp))
             Button(
                 onClick = {
-                    if (!bleServiceEnabled) {
-                        bleServiceButtonText = disableBleServiceStr
+                    bleServiceButtonText = if (!bleServiceEnabled) {
+                        disableBleServiceStr
                     } else {
-                        bleServiceButtonText = enableBleServiceStr
+                        enableBleServiceStr
                     }
                     bleServiceEnabled = !bleServiceEnabled
                     bleEnableServiceCallback(bleServiceEnabled)
@@ -124,92 +127,95 @@ fun GetButtons(
             Spacer(modifier = Modifier.width(20.dp))
             Button(
                 onClick = {
-                    if (!bleScannerEnabled) {
-                        bleScannerButtonText = disableBleScannerStr
-                    } else {
-                        bleScannerButtonText = enableBleScannerStr
-                    }
+//                    if (!bleScannerEnabled) {
+//                        bleScannerButtonText = disableBleScannerStr
+//                    } else {
+//                        bleScannerButtonText = enableBleScannerStr
+//                    }
                     bleScannerEnabled = !bleScannerEnabled
                     bleEnableScannerCallback(bleScannerEnabled)
                 },
             ) {
-                Text(text = bleScannerButtonText)
+                Text(text = bleScannerButtonText.value)
             }
         }
 
-        Row(
-           horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Button(
-                onClick = {
-                    progressDialogTitle.value = "Test progressDialogTitle"
-                    shouldShowProgressDialog.value = true
-                    progressDialogCancelCallback.value = { println("Cancel button pressed") }
-                    progressDialogProgressValue.floatValue = 0.0F
-                },
-                modifier = Modifier.weight(1f)
+        if (showDebugButtons) {
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = "Show Progress Dialog")
+                Button(
+                    onClick = {
+                        progressDialogTitle.value = "Test progressDialogTitle"
+                        shouldShowProgressDialog.value = true
+                        progressDialogCancelCallback.value = { println("Cancel button pressed") }
+                        progressDialogProgressValue.floatValue = 0.0F
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = "Show Progress Dialog")
+                }
+                Spacer(modifier = Modifier.width(15.dp))
+                Button(
+                    onClick = {
+                        alertDialogTitle.value = "Test alertDialogTitle"
+                        alertDialogText.value = "Test alertDialogText"
+                        alertDialogConfirmCallback.value = { println("Confirm button pressed") }
+                        alertDialogDismissCallback.value = { println("Dismiss button pressed") }
+                        shouldShowAlertDialog.value = true
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = "Show Alert Dialog")
+                }
+                Spacer(modifier = Modifier.width(15.dp))
+                Button(
+                    onClick = {
+                        // showNotificationCallback()
+                        snackbarMessage.value = "Some text in snackbar, ho ho"
+                        showSnackbar.value = true
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(text = "Show Notification")
+                }
             }
-            Spacer(modifier = Modifier.width(15.dp))
-            Button(
-                onClick = {
-                    alertDialogTitle.value = "Test alertDialogTitle"
-                    alertDialogText.value = "Test alertDialogText"
-                    alertDialogConfirmCallback.value = { -> println("Confirm button pressed") }
-                    alertDialogDismissCallback.value = { -> println("Dismiss button pressed") }
-                    shouldShowAlertDialog.value = true
-                },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(text = "Show Alert Dialog")
-            }
-            Spacer(modifier = Modifier.width(15.dp))
-            Button(
-                onClick = {
-                    // showNotificationCallback()
-                    snackbarMessage.value = "Some text in snackbar, ho ho"
-                    showSnackbar.value = true
-                },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(text = "Show Notification")
-            }
-        }
 
-        Spacer(modifier = Modifier.width(15.dp))
-        Row() {
-            Button(
-                onClick = {
-                    if (scannerButtonText == "Start MC DNS Discovery") {
-                        scannerButtonText = "Stop MC DNS Discovery"
-                        serviceScanner.startScan()
-                    } else {
-                        scannerButtonText = "Start MC DNS Discovery"
-                        serviceScanner.stopScan()
-                    }
-                },
-            ) {
-                Text(text = scannerButtonText)
-            }
             Spacer(modifier = Modifier.width(15.dp))
-            Button(
-                onClick = {
-                    if (servciceButtonText == "Start MC DNS Service") {
-                        servciceButtonText = "Stop MC DNS Service"
-
-                        CoroutineScope(Dispatchers.IO).launch {
-                            service.registerService()
+            Row {
+                Button(
+                    onClick = {
+                        if (scannerButtonText == "Start MC DNS Discovery") {
+                            scannerButtonText = "Stop MC DNS Discovery"
+                            serviceScanner.startScan()
+                        } else {
+                            scannerButtonText = "Start MC DNS Discovery"
+                            serviceScanner.stopScan()
                         }
-                    } else {
-                        servciceButtonText = "Start MC DNS Service"
-                        service.unregisterService()
-                    }
-                },
-            ) {
-                Text(text = servciceButtonText)
+                    },
+                ) {
+                    Text(text = scannerButtonText)
+                }
+                Spacer(modifier = Modifier.width(15.dp))
+                Button(
+                    onClick = {
+                        if (serviceButtonText == "Start MC DNS Service") {
+                            serviceButtonText = "Stop MC DNS Service"
+
+                            CoroutineScope(Dispatchers.IO).launch {
+                                service.registerService()
+                            }
+                        } else {
+                            serviceButtonText = "Start MC DNS Service"
+                            service.unregisterService()
+                        }
+                    },
+                ) {
+                    Text(text = serviceButtonText)
+                }
             }
         }
+
         Button(
             onClick = {
                 sendDataCallback()
@@ -219,7 +225,7 @@ fun GetButtons(
         }
 
         Spacer(modifier = Modifier.width(15.dp))
-        Row() {
+        Row {
             Text(
                 text = nameStr,
             )
@@ -262,11 +268,13 @@ fun GetGrid(
                         }
                     )
             ) {
-                Text("Name: ${item.deviceName}")
-                Text("Info: ${item.deviceInfo}")
-                Spacer(modifier = Modifier.width(10.dp))
-                Button(onClick = {}) {
-                    Text("Button")
+                Column(
+                    modifier = Modifier
+                        .padding(15.dp)
+                        .align(alignment = Alignment.CenterHorizontally)
+                ) {
+                    Text("Name: ${item.deviceName}")
+                    Text("Info: ${item.deviceInfo}")
                 }
             }
         }

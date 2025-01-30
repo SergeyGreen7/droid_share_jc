@@ -19,7 +19,7 @@ class McDnsScanner {
     private var scanJob: Job? = null
     private var scannedServices = mutableMapOf<String, DiscoveredService>()
 
-    var referenceServiceName = ""
+    private var referenceServiceName = ""
     var callbackOnRefServiceFind: ((serviceInfo: DiscoveredService)-> Unit)? = null
 
     private var addressPattern: Pattern = Pattern.compile(
@@ -81,13 +81,6 @@ class McDnsScanner {
                 }
             }
         }
-//
-//        services.clear()
-//        isActive = true
-//        showDiscoveredDevices()
-//
-//        Log.d(TAG, "LnsScanner, startScan()")
-//        manager.discoverServices(LnsService.SERVICE_TYPE, LnsService.NSD_PROTOCOL, discoveryListener)
     }
 
     fun stopScan() {
@@ -95,14 +88,7 @@ class McDnsScanner {
 
         scanJob?.cancel()
         scanJob = null
-        // manager.stopServiceDiscovery(discoveryListener)
     }
-
-//    private fun showDiscoveredDevices() {
-//        if (showResolvedServices) {
-//            notifier.onDeviceListUpdate(services.map { DeviceInfo(it.value) })
-//        }
-//    }
 
     fun scanForService(name: String) {
         println("McDnsScanner, start findService()")

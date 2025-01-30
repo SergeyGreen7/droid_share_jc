@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -39,6 +39,7 @@ fun MyProgressDialog() {
             onDismissRequest = { shouldShowProgressDialog.value = false },
             DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
         ) {
+            val progressStr = "%.0f".format(progress)
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -52,7 +53,7 @@ fun MyProgressDialog() {
 //                            progress = progress,
 //                            color = Color.Black,
 //                        )
-                        Text(text = "Progress $progress %")
+                        Text(text = "Progress $progressStr %")
                         Spacer(modifier = Modifier.weight(1f))
                         Button(onClick = {
                             shouldShowProgressDialog.value = false

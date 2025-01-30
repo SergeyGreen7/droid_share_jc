@@ -1,7 +1,6 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import java.util.regex.Pattern.compile
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -30,7 +29,7 @@ kotlin {
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
-            implementation(compose.material)
+            implementation(compose.material3)
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
@@ -39,7 +38,8 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.dns.sd.kt)
             implementation(libs.log4j.slf4j2.impl)
-            implementation(libs.mpfilepicker)
+            // implementation(libs.mpfilepicker)
+            implementation(libs.filekit.compose)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
@@ -48,7 +48,6 @@ kotlin {
             implementation(libs.logback.classic)
             implementation(libs.blessed)
             implementation(libs.dbus.java.transport.native.unixsocket)
-//            implementation("com.github.weliem.blessed-bluez:blessed:0.64")
             implementation(files("../libs/WinBleNativeApi.jar"))
         }
     }
@@ -102,17 +101,17 @@ android {
 }
 
 dependencies {
-    // implementation(libs.androidx.foundation.layout.android)
-    // implementation(libs.androidx.material3.android)
+    implementation(libs.androidx.foundation.layout.android)
+    implementation(libs.androidx.material3.android)
     implementation(libs.androidx.ui.graphics.android)
-    // implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.material3)
     // implementation(libs.androidx.compose.material)
     implementation(libs.firebase.inappmessaging.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.adaptive.android)
     // implementation(libs.androidx.material3.adaptive.android)
-    // debugImplementation(compose.uiTooling)
+    debugImplementation(compose.uiTooling)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 }
 

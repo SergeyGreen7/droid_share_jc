@@ -18,11 +18,15 @@ class TxFilesDescriptor() {
     var size = 0
     var dscrs  = mutableListOf<TxFileDescriptor>()
 
-    fun copy(): TxFilesDescriptor {
-        val copy = TxFilesDescriptor()
-        copy.size = this.size
-        copy.dscrs = this.dscrs.toMutableList()
-        return copy
+    fun clone(): TxFilesDescriptor {
+        val clone = TxFilesDescriptor()
+        this.dscrs.forEach {
+            clone.add(TxFileDescriptor(
+                it.fileName,
+                it.fileSize,
+                it.inputStream))
+        }
+        return clone
     }
     fun clear() {
         size = 0
@@ -33,10 +37,10 @@ class TxFilesDescriptor() {
         dscrs.add(dscr)
     }
     fun isEmpty(): Boolean {
-        return size == 0
+        return dscrs.isEmpty()
     }
     fun isNotEmpty(): Boolean {
-        return size > 0
+        return dscrs.isNotEmpty()
     }
     override fun toString(): String {
         val sb = StringBuilder()
@@ -66,7 +70,7 @@ class RxFilesDescriptor() {
     fun isReceptionFinished(): Boolean {
         return dscrs.size == numFiles
     }
-    fun getReceivedPercent(): Float {
+    fun getReceivedPercentFloat(): Float {
         return sizeReceived.toFloat() / sizeTotal.toFloat() * 100f
     }
 }

@@ -52,12 +52,12 @@ class BluetoothDataTransceiver(
         if (bltClientServer!!.isClientConnected()) {
             Log.d(TAG, "wifiClientServer!!.isSocketCreated() = true")
 
-            dataTransceiver!!.setStreams(
+            dataTransceiver!!.configureStreams(
                 bltClientServer!!.getInputStream(),
                 bltClientServer!!.getOutputStream()
             )
             rxJob = CoroutineScope(Dispatchers.IO).launch {
-                dataTransceiver!!.receptionFlow()
+                dataTransceiver!!.startReceptionFlow()
             }
             Log.d(TAG, "startServer(), isJobActive(fileJob) = ${isJobActive(rxJob)}")
         }
@@ -76,12 +76,12 @@ class BluetoothDataTransceiver(
         if (bltClientServer!!.isClientConnected()) {
             Log.d(TAG, "wifiClientServer!!.isSocketCreated() = true")
 
-            dataTransceiver!!.setStreams(
+            dataTransceiver!!.configureStreams(
                 bltClientServer!!.getInputStream(),
                 bltClientServer!!.getOutputStream()
             )
             rxJob = CoroutineScope(Dispatchers.IO).launch {
-                dataTransceiver!!.receptionFlow()
+                dataTransceiver!!.startReceptionFlow()
             }
             Log.d(TAG, "startClient(), isJobActive(fileJob) = ${isJobActive(rxJob)}")
         }
@@ -90,7 +90,7 @@ class BluetoothDataTransceiver(
     fun destroySocket() {
         CoroutineScope(Dispatchers.IO).launch {
             stopActiveJobs()
-            dataTransceiver!!.shutdown()
+            dataTransceiver!!.reset()
             bltClientServer!!.shutdown()
         }
     }

@@ -1,7 +1,7 @@
 package org.example.project.utils
 
 enum class MessageType {
-    FILE_PACK_DSCR,
+    FILE_COMMON_DSCR,
     FILE,
     CANCEL_TX,
     CANCEL_RX,
@@ -10,11 +10,12 @@ enum class MessageType {
     TX_REQUEST,
     ACCEPT_TX,
     DISMISS_TX,
+    TEST_MESSAGE
 }
 
 fun isMessageControl(type: MessageType): Boolean {
     return when(type) {
-        MessageType.FILE_PACK_DSCR,
+        MessageType.FILE_COMMON_DSCR,
         MessageType.FILE,
         MessageType.PROGRESS_RX -> {
             false
@@ -24,7 +25,8 @@ fun isMessageControl(type: MessageType): Boolean {
         MessageType.RECEPTION_DONE,
         MessageType.TX_REQUEST,
         MessageType.ACCEPT_TX,
-        MessageType.DISMISS_TX -> {
+        MessageType.DISMISS_TX,
+        MessageType.TEST_MESSAGE,-> {
             true
         }
     }

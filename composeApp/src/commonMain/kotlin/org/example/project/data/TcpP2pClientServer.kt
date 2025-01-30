@@ -13,27 +13,31 @@ class TcpP2pClientServer {
     private var server: ServerSocket? = null
 
     fun shutdown() {
-        try {
-            server?.close()
-            println("Server socket is closed")
-        } catch (e: Exception) {
-            println("Could not close the server socket, $e")
-        }
-        try {
-            client?.close()
-            println("Client socket is closed")
-        } catch (e: Exception) {
-            println("Could not close the client socket, $e")
+        if (server != null) {
+            try {
+                server?.close()
+                println("Server socket is closed")
+            } catch (e: Exception) {
+                println("Could not close the server socket, $e")
+            }
         }
 
-        println("TcpP2pConnector, shutdown(), isSocketCreated() = ${isSocketCreated()}")
+        if (client != null) {
+            try {
+
+                client?.close()
+                println("Client socket is closed")
+            } catch (e: Exception) {
+                println("Could not close the client socket, $e")
+            }
+        }
     }
 
     fun isSocketNotCreated(): Boolean {
         return !isSocketCreated()
     }
 
-    fun isSocketCreated(): Boolean {
+    private fun isSocketCreated(): Boolean {
         println( "TcpP2pConnector, isSocketCreated():")
         println( "    server == null = ${server == null}")
         if (server != null) {
@@ -55,10 +59,6 @@ class TcpP2pClientServer {
 
     fun getOutputStream(): OutputStream {
         return client!!.getOutputStream()
-    }
-
-    fun isServerOpened(): Boolean {
-        return server != null && server!!.isBound && !server!!.isClosed
     }
 
     fun isClientConnected(): Boolean {
@@ -83,6 +83,7 @@ class TcpP2pClientServer {
         } else {
             println( "Server: Socket is already opened")
         }
+
         try {
             println( "Start server.accept()...")
             client = server?.accept()
@@ -91,5 +92,9 @@ class TcpP2pClientServer {
         } catch (e: Exception) {
             println( "TcpP2pConnector, createServer, exception happened: $e")
         }
+    }
+
+    private fun isServerOpened(): Boolean {
+        return server != null && server!!.isBound && !server!!.isClosed
     }
 }

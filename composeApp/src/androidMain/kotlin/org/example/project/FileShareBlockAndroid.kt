@@ -15,7 +15,7 @@ import android.provider.OpenableColumns
 import android.util.Log
 
 import androidx.core.app.ActivityCompat
-import com.darkrockstudios.libraries.mpfilepicker.MPFile
+import io.github.vinceglb.filekit.core.PlatformFiles
 
 import org.example.project.connection.BluetoothController
 import org.example.project.connection.GattClient
@@ -87,6 +87,7 @@ open class FileShareBlockAndroid (
 
         Log.d(TAG, "FileShareFragment, start onViewCreated()")
         nameStr.value = "Your name: ${bluetoothController.getName()}"
+        connectionManager.setTransmitterName(bluetoothController.getName())
     }
 
     override fun config(notifier: NotificationInterface) {
@@ -281,17 +282,17 @@ open class FileShareBlockAndroid (
     }
 
     @SuppressLint("Range")
-    override var getFileDescriptorFromPicker = { files: List<MPFile<Any>>? ->
+    override var getFileDescriptorFromPicker = { files: PlatformFiles? ->
         txFiles.clear()
         if (!files.isNullOrEmpty()) {
             println("$files")
 
             files.forEach { file ->
-                println("javaClass = ${file.javaClass}")
-                println("platformFile = ${file.platformFile}")
-                println("path = ${file.path}")
+//                println("javaClass = ${file.javaClass}")
+                println("file = $file")
+//                println("path = ${file.path}")
 
-                val uri = file.platformFile as Uri
+                val uri = file.uri
                 val cursor = context.contentResolver?.
                     query(uri, null, null, null, null) as Cursor
                 cursor.moveToFirst()

@@ -1,12 +1,5 @@
 package org.example.project.connection.mcdns
 
-//import android.annotation.SuppressLint
-//import android.net.nsd.NsdManager
-//import android.net.nsd.NsdServiceInfo
-//import android.text.TextUtils
-//import android.util.Log
-//import org.example.project.NotificationInterface
-//import org.example.project.grid.DeviceInfo
 import com.appstractive.dnssd.NetService
 import com.appstractive.dnssd.createNetService
 import kotlinx.coroutines.CoroutineScope

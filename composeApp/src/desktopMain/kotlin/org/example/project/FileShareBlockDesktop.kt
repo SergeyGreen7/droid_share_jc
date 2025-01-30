@@ -2,7 +2,7 @@ package org.example.project
 
 import ShowDiscoveredDevicesCallback
 import WinBleNativeApi
-import com.darkrockstudios.libraries.mpfilepicker.MPFile
+import io.github.vinceglb.filekit.core.PlatformFiles
 import org.example.project.connection.mcdns.McDnsService
 import org.example.project.data.DeviceInfoCommon
 import org.example.project.utils.NotificationInterface
@@ -13,7 +13,6 @@ import org.example.project.ui.*
 import org.example.project.utils.BleClientInterface
 import org.example.project.utils.BleScannerInterface
 import org.example.project.utils.BleServiceInterface
-import java.io.File
 import java.io.FileInputStream
 import java.nio.file.Files
 import java.util.UUID
@@ -79,6 +78,7 @@ class FileShareBlockDesktop (
 //
 //        Log.d(TAG, "FileShareFragment, start onViewCreated()")
         nameStr.value = "Your name: ${winBle.hostName}"
+        connectionManager.setTransmitterName(winBle.hostName)
     }
 
     override fun config(notifier: NotificationInterface) {
@@ -247,17 +247,17 @@ class FileShareBlockDesktop (
         }
     }
 
-    override var getFileDescriptorFromPicker = { files: List<MPFile<Any>>? ->
+    override var getFileDescriptorFromPicker = { files: PlatformFiles? ->
         txFiles.clear()
         if (!files.isNullOrEmpty()) {
             println("$files")
 
             files.forEach { file ->
-                println("javaClass = ${file.javaClass}")
-                println("platformFile = ${file.platformFile}")
-                println("path = ${file.path}")
+//                println("javaClass = ${file.javaClass}")
+                println("file = $file")
+//                println("path = ${file.path}")
 
-                val f = File(file.path)
+                val f = file.file
                 val fileName = f.name
                 val fileSize = Files.size(Path(f.path)).toInt()
                 val inputStream = FileInputStream(f)
