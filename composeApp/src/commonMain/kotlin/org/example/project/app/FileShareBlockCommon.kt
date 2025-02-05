@@ -4,7 +4,6 @@ import com.appstractive.dnssd.DiscoveredService
 import io.github.vinceglb.filekit.core.PlatformFiles
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.example.project.connection.mcdns.McDnsScanner
 import org.example.project.data.DeviceInfoCommon
@@ -15,7 +14,6 @@ import org.example.project.ui.alertDialogDismissCallback
 import org.example.project.ui.alertDialogText
 import org.example.project.ui.alertDialogTitle
 import org.example.project.utils.TxFilesDescriptor
-import org.example.project.ui.bleScannerButtonText
 import org.example.project.ui.fileStr
 import org.example.project.ui.progressDialogCancelCallback
 import org.example.project.ui.progressDialogProgressValue
@@ -26,9 +24,6 @@ import org.example.project.ui.shouldShowAlertDialog
 import org.example.project.ui.shouldShowProgressDialog
 import org.example.project.ui.showSnackbar
 import org.example.project.ui.snackbarMessage
-import org.example.project.utils.BleClientInterface
-import org.example.project.utils.BleScannerInterface
-import org.example.project.utils.BleServiceInterface
 import java.net.InetAddress
 import java.util.UUID
 
@@ -38,33 +33,51 @@ enum class FileSharingRole {
 }
 
 abstract class FileShareBlockCommon (
-    private var role: FileSharingRole,
     private val saveFileDir: String,
 ) {
 
-    private val REFERENCE_DATA = "1234567890"
+    private val CREATE_SERVER_COMMAND = "CREATE_SERVER"
+    private val DESTROY_SERVER_COMMAND = "DESTROY_SERVER"
     private val FS_SERVICE_NAME_BASE = "fs_service"
     private val FS_SERVICE_PORT = 8889
     private val GATT_SERVICE_UUID = UUID.fromString("5116c812-ad72-449f-a503-f8662bc21cde")
     private val GATT_CHARACTER_SERVICE_CONFIG_UUID = UUID.fromString("330fb1d7-afb6-4b00-b5da-3b0feeef9816")
 
-    private lateinit var bleScanner: BleScannerInterface
-    private lateinit var bleService: BleServiceInterface
-    private lateinit var bleClient: BleClientInterface
-
+    private var fsServiceName = ""
     private lateinit var mcDnsScanner: McDnsScanner
-
     protected lateinit var connectionManager: P2pConnectionManager
 
-    protected var dataTransmissionJob: Job? = null
-
+    protected var selectedDeviceIndex = -1
     protected var txFiles = TxFilesDescriptor()
     protected var selectedDeviceInfo: DeviceInfoCommon? = null
+
+    protected abstract fun configBleService(
+        serviceUuid: UUID,
+        characteristicUuid: UUID,
+        createServerCommand: String,
+        destroyServerCommand: String,
+        createServerCallback: (name: String) -> Unit,
+        destroyServerCallback: () -> Unit)
+    protected abstract fun startBleService()
+    protected abstract fun stopBleService()
+
+    protected abstract fun configBleScanner(serviceUuid: UUID)
+    protected abstract fun startBleScanner()
+    protected abstract fun stopBleScanner()
+
+    protected abstract fun configBleClient(
+        serviceUuid: UUID,
+        characteristicUuid: UUID,
+        callback: (flag: Boolean) -> Unit)
+    protected abstract fun setBleClientDataToSend(data: String)
+    protected abstract fun connectBleClient(info: DeviceInfoCommon)
+    protected abstract fun sendMessageBleClient(message: String)
+    protected abstract fun disconnectBleClient()
 
     abstract fun setMcDnsServiceName(name: String)
     abstract fun registerMcDnsService()
     abstract fun unregisterMcDnsService()
-    protected abstract fun connectBleClient(info: DeviceInfoCommon)
+
     protected abstract fun config()
 
     abstract val setDeviceInfoCommon: (device: DeviceInfoCommon, index: Int) -> Unit
@@ -110,15 +123,15 @@ abstract class FileShareBlockCommon (
             shouldShowAlertDialog.value = false
         }
 
-        override fun cancelConnection() {
-            disableConnection()
-            cancelConnectionFunc()
+        override fun closeConnection() {
+            disableConnectionState()
+            closeConnectionFunc()
         }
 
-        override fun disconnect() {
-            disableConnection()
-            disconnectFunc()
-        }
+//        override fun disconnect() {
+//            disableConnection()
+//            disconnectFunc()
+//        }
 
         override fun onDeviceListUpdate(deviceList: List<DeviceInfoCommon>) {
             println("onDeviceListUpdate, deviceList.size = ${org.example.project.ui.deviceList.size}")
@@ -129,19 +142,16 @@ abstract class FileShareBlockCommon (
         }
     }
 
-    protected fun configureBle(
-        bleScanner: BleScannerInterface,
-        bleService: BleServiceInterface,
-        bleClient: BleClientInterface) {
-        this.bleScanner = bleScanner
-        this.bleService = bleService
-        this.bleClient = bleClient
-    }
-
     fun init() {
         config()
         onCreate()
-        enableBleServiceCallback(true)
+        startBleService()
+    }
+
+    fun stopAndDestroy() {
+        stopBleScanner()
+        stopBleService()
+        disconnectBleClient()
     }
 
     protected open fun onCreate() {
@@ -151,45 +161,48 @@ abstract class FileShareBlockCommon (
 
         mcDnsScanner = McDnsScanner()
 
-        bleClient.setServiceUuid(GATT_SERVICE_UUID)
-        bleClient.setCharacteristicUuid(GATT_CHARACTER_SERVICE_CONFIG_UUID)
-        bleService.setServiceUuid(GATT_SERVICE_UUID)
-        bleService.setCharacteristicUuid(GATT_CHARACTER_SERVICE_CONFIG_UUID)
-        bleScanner.setServiceUuid(GATT_SERVICE_UUID)
+        // Configure BLE client
+        configBleClient(
+            GATT_SERVICE_UUID,
+            GATT_CHARACTER_SERVICE_CONFIG_UUID
+        ) { flag: Boolean ->
+            if (flag) {
+                notifier.showNotification("GATT data is sent")
+
+                println("run mcDnsScanner.scanForService(), serviceName = $fsServiceName")
+                mcDnsScanner.scanForService(fsServiceName)
+            } else {
+                notifier.showNotification("GATT data is failed to send")
+            }
+        }
 
         // Configure BLE service
-        bleService.referenceData = REFERENCE_DATA
-        bleService.callbackOnReferenceDataReception = { flag: Boolean, name:String ->
-            println("start callbackOnDataReception(), flag = $flag, name = $name")
+        configBleService(
+            GATT_SERVICE_UUID,
+            GATT_CHARACTER_SERVICE_CONFIG_UUID,
+            CREATE_SERVER_COMMAND,
+            DESTROY_SERVER_COMMAND,
+            createServerCallback = { name: String ->
+                println("start createServerCallback, name = $name")
 
-            if (flag) {
                 setMcDnsServiceName(name)
                 println("run registerService(), serviceName = $name")
 
                 registerMcDnsService()
 
-                 CoroutineScope(Dispatchers.IO).launch {
+                CoroutineScope(Dispatchers.IO).launch {
                     connectionManager.createServer(FS_SERVICE_PORT)
+                    println("createServer is finished")
+                }
+            },
+            destroyServerCallback = {
+                println("start destroyServerCallback")
 
-                     println("createServer is finished")
-                 }
+                unregisterMcDnsService()
+                connectionManager.destroySocket()
             }
-        }
-
-        // Configure BLE client
-        bleClient.callbackOnDataSend = { flag: Boolean ->
-            if (flag) {
-                notifier.showNotification("GATT data is sent")
-                // bleClient.disconnect()
-
-                val id = bleClient.dataToSend.indexOf("@")
-                val serviceName = bleClient.dataToSend.substring(id+1)
-                println("run mcDnsScanner.scanForService(), serviceName = $serviceName")
-                mcDnsScanner.scanForService(serviceName)
-            } else {
-                notifier.showNotification("GATT data is failed to send")
-            }
-        }
+        )
+        configBleScanner(GATT_SERVICE_UUID)
 
         // Configure MC DNS scanner
         mcDnsScanner.callbackOnRefServiceFind = { service: DiscoveredService ->
@@ -199,50 +212,28 @@ abstract class FileShareBlockCommon (
                 connectionManager.createClient(
                     service.port,
                     InetAddress.getByName(service.addresses[0]))
-
                 println("createClient is finished")
 
-                println("run dataTransceiver.sendData(txFiles), " +
-                        "txFiles.isNotEmpty() = ${txFiles.isNotEmpty()}")
-                dataTransmissionJob = CoroutineScope(Dispatchers.IO).launch {
-                    connectionManager.sendData(txFiles.clone())
-
-                println("callbackOnRefServiceFind is finished")
-                }
-//                txFiles.clear()
+                println("run connectionManager.sendData(txFiles), txFiles.isNotEmpty() = ${txFiles.isNotEmpty()}")
+                connectionManager.sendData(txFiles.clone())
             }
         }
     }
 
-    private fun disconnectFunc() {
-        println("start disconnect()")
-        stopBleScanner()
+    private fun closeConnectionFunc() {
+        println("start cancelConnectionFunc()")
+        connectionManager.destroySocket()
+        startBleScanner()
         mcDnsScanner.stopScan()
         unregisterMcDnsService()
-        connectionManager.destroySocket()
-    }
-
-    private fun cancelConnectionFunc() {
-        println("start cancelConnection(), role = $role")
-        connectionManager.destroySocket()
-        when (role) {
-            FileSharingRole.FILE_TRANSMITTER -> {
-                startBleScanner()
-                mcDnsScanner.stopScan()
-                unregisterMcDnsService()
-            }
-            FileSharingRole.FILE_RECEIVER -> {
-                unregisterMcDnsService()
-            }
-        }
+        disconnectBleClient()
     }
 
     val enableBleServiceCallback = { isEnabled: Boolean ->
         if (isEnabled) {
-            role = FileSharingRole.FILE_RECEIVER
-            bleService.startService()
+            startBleService()
         } else {
-            bleService.stopService()
+            stopBleService()
             unregisterMcDnsService()
         }
     }
@@ -275,29 +266,25 @@ abstract class FileShareBlockCommon (
             stopDataTransmission()
         }
 
-            val serviceName = "$FS_SERVICE_NAME_BASE-${(Math.random() * 10000).toInt()}"
-            bleClient.dataToSend = "$REFERENCE_DATA@$serviceName"
-            connectBleClient(info)
-    }
-
-    private fun startBleScanner() {
-            bleScannerButtonText.value = "Turn Scanner OFF"
-            bleScanner.startScan()
-    }
-
-    private fun stopBleScanner() {
-        bleScannerButtonText.value = "Turn Scanner ON"
-        bleScanner.stopScan()
+        fsServiceName = "$FS_SERVICE_NAME_BASE-${(Math.random() * 10000).toInt()}"
+        setBleClientDataToSend("$CREATE_SERVER_COMMAND@$fsServiceName")
+        connectBleClient(info)
     }
 
     private fun stopDataTransmission() {
-        println("start stopDataTransmission()")
-        connectionManager.cancelDataTransmission()
-        notifier.showNotification("Data transmission is canceled")
-        disableConnection()
+        println("start stopDataTransmission(), " +
+                "activeDataTransmission = ${connectionManager.isActiveTransmission()}")
+
+        if (connectionManager.isActiveTransmission()) {
+            connectionManager.cancelDataTransmission()
+        } else {
+            sendMessageBleClient("$DESTROY_SERVER_COMMAND@")
+            notifier.closeConnection()
+        }
+        disableConnectionState()
     }
 
-    protected fun disableConnection() {
+    protected fun disableConnectionState() {
         txFiles.clear()
         selectedIndex.value = -1
         sendDataButtonIsActive.value = false
@@ -310,7 +297,6 @@ abstract class FileShareBlockCommon (
         } else {
             unregisterMcDnsService()
         }
-        Unit
     }
 
     var enableMcDnsScannerDebug = { flag: Boolean ->
@@ -319,6 +305,5 @@ abstract class FileShareBlockCommon (
         } else {
             mcDnsScanner.stopScan()
         }
-        Unit
     }
 }

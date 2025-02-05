@@ -7,24 +7,18 @@ import org.example.project.connection.mcdns.McDnsService
 import org.example.project.data.DeviceInfoCommon
 import org.example.project.utils.TxFileDescriptor
 import org.example.project.fragments.FileShareBlockCommon
-import org.example.project.fragments.FileSharingRole
 import org.example.project.ui.*
-import org.example.project.utils.BleClientInterface
-import org.example.project.utils.BleScannerInterface
-import org.example.project.utils.BleServiceInterface
 import java.io.FileInputStream
 import java.nio.file.Files
 import java.util.UUID
 import kotlin.io.path.Path
 
 class FileShareBlockDesktop (
-    role: FileSharingRole,
     saveFileDir: String,
 ) : FileShareBlockCommon(
-    role, saveFileDir
+    saveFileDir
 ) {
 
-    private var selectedDeviceIndex = -1
     private var mcDnsService = McDnsService("desktop-")
     private val winBle = WinBleNativeApi()
     private var devices = mutableListOf<DeviceInfoCommon>()
@@ -37,77 +31,6 @@ class FileShareBlockDesktop (
     }
 
     override fun config() {
-        winBle.setServiceUuid("5116c812-ad72-449f-a503-f8662bc21cde")
-        winBle.setCharacterisitcUuid("330fb1d7-afb6-4b00-b5da-3b0feeef9816")
-        winBle.setReferenceData("1234567890")
-        winBle.setDataToSend("1234567890@fs_service-777")
-
-        val bleScanner = object: BleScannerInterface {
-            override fun setServiceUuid(uuid: UUID) {
-                winBle.setServiceUuid(uuid.toString())
-            }
-
-            override fun startScan() {
-                winBle.startScanner()
-            }
-
-            override fun stopScan() {
-                winBle.stopScanner()
-            }
-        }
-
-        val bleService = object: BleServiceInterface {
-            override var referenceData: String
-                get() { return winBle.referenceData }
-                set(value) { winBle.setReferenceData(value) }
-            override var callbackOnReferenceDataReception: ( flag: Boolean, name: String ) -> Unit
-                get() { return {_: Boolean, _: String -> } }
-                set(value) {
-                    winBle.configReferenceDataReceptionCallback {
-                        flag, name -> value(flag, name)
-                    }
-                }
-
-            override fun setServiceUuid(uuid: UUID) {
-                winBle.setServiceName(uuid.toString())
-            }
-
-            override fun setCharacteristicUuid(uuid: UUID) {
-                winBle.setCharacterisitcUuid(uuid.toString())
-            }
-
-            override fun startService() {
-                winBle.startService()
-            }
-
-            override fun stopService() {
-                winBle.stopService()
-            }
-        }
-
-        val bleClient = object: BleClientInterface {
-            override var dataToSend: String
-                get() { return winBle.dataToSend }
-                set(value) { winBle.setDataToSend(value) }
-            override var callbackOnDataSend: ( _: Boolean) -> Unit
-                get() { return {  _: Boolean -> } }
-                set(value) {
-                    winBle.configDataSendCallback { flag -> value(flag) }
-                }
-
-            override fun setServiceUuid(uuid: UUID) {
-                winBle.setServiceName(uuid.toString())
-            }
-
-            override fun setCharacteristicUuid(uuid: UUID) {
-                winBle.setCharacterisitcUuid(uuid.toString())
-            }
-
-            override fun disconnect() {
-                winBle.stopScanner()
-            }
-        }
-        super.configureBle(bleScanner, bleService, bleClient)
 
         val showDiscoveredDevicesCallback = object: ShowDiscoveredDevicesCallback {
             override fun run(names: Array<out String>?, addresses: Array<out String>?) {
@@ -138,12 +61,77 @@ class FileShareBlockDesktop (
         selectedDeviceIndex = index
     }
 
+    override fun configBleService(
+        serviceUuid: UUID,
+        characteristicUuid: UUID,
+        createServerCommand: String,
+        destroyServerCommand: String,
+        createServerCallback: (name: String) -> Unit,
+        destroyServerCallback: () -> Unit,
+    ) {
+        winBle.setServiceName(serviceUuid.toString())
+        winBle.setCharacterisitcUuid(characteristicUuid.toString())
+        winBle.setCreateServerCommand(createServerCommand)
+        winBle.setDestroyServerCommand(destroyServerCommand)
+        winBle.setCreateServerCallback { name ->
+            createServerCallback(name)
+        }
+        winBle.setDestroyServerCallback {
+            destroyServerCallback()
+        }
+    }
+
+    override fun startBleService() {
+        println("start winBle.startService()")
+        winBle.startService()
+    }
+
+    override fun stopBleService() {
+        winBle.stopService()
+    }
+
+    override fun configBleScanner(serviceUuid: UUID) {
+        winBle.setServiceUuid(serviceUuid.toString())
+    }
+
+    override fun startBleScanner() {
+        winBle.startScanner()
+    }
+
+    override fun stopBleScanner() {
+        winBle.stopScanner()
+    }
+
+    override fun configBleClient(
+        serviceUuid: UUID,
+        characteristicUuid: UUID,
+        callback: (flag: Boolean) -> Unit
+    ) {
+        winBle.setServiceName(serviceUuid.toString())
+        winBle.setCharacterisitcUuid(characteristicUuid.toString())
+        winBle.configDataSendCallback { flag -> callback(flag) }
+    }
+
+    override fun setBleClientDataToSend(data: String) {
+        winBle.setDataToSend(data)
+    }
+
+    override fun connectBleClient(info: DeviceInfoCommon) {
+        println("selectedDeviceIndex = $selectedDeviceIndex")
+        if (selectedDeviceIndex >= 0) {
+            winBle.connectBleClient(selectedDeviceIndex)
+        }
+    }
+
+    override fun disconnectBleClient() {
+        winBle.disconnectBleClient()
+    }
+
     override fun setMcDnsServiceName(name: String) {
         println("FileShareBlockDesktop, setServiceName(), name = $name")
         mcDnsService.serviceName = name
     }
 
-    // override suspend fun registerMcDnsService() {
     override fun registerMcDnsService() {
         println("start mcDnsService.registerService()")
         mcDnsService.registerService()
@@ -154,11 +142,9 @@ class FileShareBlockDesktop (
         mcDnsService.unregisterService()
     }
 
-    override fun connectBleClient(info: DeviceInfoCommon) {
-        println("selectedDeviceIndex = $selectedDeviceIndex")
-        if (selectedDeviceIndex >= 0) {
-            winBle.connectService(selectedDeviceIndex)
-        }
+
+    override fun sendMessageBleClient(message: String) {
+        winBle.sendMessageBleClient(message)
     }
 
     override var getFileDescriptorFromPicker = { files: PlatformFiles? ->

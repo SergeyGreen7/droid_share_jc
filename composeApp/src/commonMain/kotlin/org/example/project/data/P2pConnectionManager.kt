@@ -16,16 +16,17 @@ class P2pConnectionManager(
         private const val CLIENT_CONNECTION_TIMEOUT_MS = 30000
     }
 
+    private var transmissionIsActive = false
     private var socketJob: Job? = null
     private var rxJob: Job? = null
     private var txJob: Job? = null
 
-    private var dataTransceiver: DataTransceiver2 = DataTransceiver2(notifier, saveFileDir)
+    private var dataTransceiver: DataTransceiver = DataTransceiver(notifier, saveFileDir)
     // private var txFiles: TxFilesDescriptor = TxFilesDescriptor()
     private var clientServer: TcpP2pClientServer = TcpP2pClientServer()
 
     fun cancelDataTransmission() {
-        println("start cancelDataTransmission()")
+        println("start cancelDataTransmission(), txJob.isActive? = ${txJob?.isActive}")
         dataTransceiver.cancelDataTransmission()
     }
 
@@ -85,19 +86,30 @@ class P2pConnectionManager(
     }
 
     fun sendData(txFiles: TxFilesDescriptor) {
-        if (isJobActive(txJob)) {
-            println("sendData(), txJob is currently active")
+        if (isJobActive(txJob) || transmissionIsActive) {
+            println("sendData(), transmission is already active")
             return
         }
 
         txJob = CoroutineScope(Dispatchers.IO).launch {
             println("sendData(), start txJob, txFiles.isNotEmpty() = ${txFiles.isNotEmpty()}")
+            transmissionIsActive = true
             dataTransceiver.transmissionFlow(txFiles)
         }
+
+        println("txJob.isActive = ${txJob?.isActive}")
     }
 
     fun setTransmitterName(name: String) {
         dataTransceiver.setTransmitterName(name)
+    }
+
+    fun isActiveTransmission() : Boolean {
+        println("start isActiveTransmission()")
+        println("    txJob.isActive? = ${txJob?.isActive}")
+        println("    rxJob.isActive? = ${rxJob?.isActive}")
+        println("    transmissionIsActive = $transmissionIsActive")
+        return isJobActive(txJob) || transmissionIsActive
     }
 
     private fun isJobActive(job: Job?) : Boolean {
@@ -117,6 +129,6 @@ class P2pConnectionManager(
             rxJob?.cancel()
             println("stopActiveJobs, stop rxJob")
         }
-
+        transmissionIsActive = false
     }
 }

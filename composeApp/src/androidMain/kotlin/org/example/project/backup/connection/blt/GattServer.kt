@@ -42,13 +42,15 @@ class GattServer(
     private var advertiser: BluetoothLeAdvertiser? = null
     private var gattServer: BluetoothGattServer? = null
     private var devices: MutableList<BluetoothDevice>
-    private lateinit var pseudoRandomData: ByteArray
+    private var pseudoRandomData: ByteArray
 
     private var serviceUuid = DEFAULT_UUID
     private var characteristicUuid = DEFAULT_UUID
 
-    var referenceData = ""
-    var callbackOnReferenceDataReception: ((flag: Boolean, name:String) -> Unit)? = null
+    var createServerCommand = ""
+    var destroyServerCommand = ""
+    var createServerCallback: ((name:String) -> Unit)? = null
+    var destroyServerCallback: (() -> Unit)? = null
 
     init {
         if (manager.adapter.isEnabled) {
@@ -232,11 +234,17 @@ class GattServer(
                 Log.d(TAG, "received message: '$message'")
 
                 val prefix =  message.substringBefore("@")
-                val service_name = message.substringAfter("@")
-                Log.d(TAG, "service_name = $service_name")
+                Log.d(TAG, "prefix = $prefix")
 
                 CoroutineScope(Dispatchers.IO).launch {
-                    callbackOnReferenceDataReception?.invoke(prefix == referenceData, service_name)
+                    if (prefix == createServerCommand) {
+                        val serviceName = message.substringAfter("@")
+
+                        Log.d(TAG, "serviceName = $serviceName")
+                        createServerCallback?.invoke(serviceName)
+                    } else if (prefix == destroyServerCommand) {
+                        destroyServerCallback?.invoke()
+                    }
                 }
 
                 Log.d(TAG, "GattServer, onCharacteristicWriteRequest, notifyCharacteristicChanged")

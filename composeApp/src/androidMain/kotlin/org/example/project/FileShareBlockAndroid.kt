@@ -23,21 +23,16 @@ import org.example.project.connection.LnsService
 import org.example.project.data.DeviceInfoCommon
 import org.example.project.utils.TxFileDescriptor
 import org.example.project.fragments.FileShareBlockCommon
-import org.example.project.fragments.FileSharingRole
 import org.example.project.ui.*
-import org.example.project.utils.BleClientInterface
-import org.example.project.utils.BleScannerInterface
-import org.example.project.utils.BleServiceInterface
 import java.io.InputStream
 import java.util.UUID
 
 class FileShareBlockAndroid (
     private val context: Context,
     private val activity: Activity,
-    role: FileSharingRole,
     saveFileDir: String,
 ) : FileShareBlockCommon(
-    role, saveFileDir
+    saveFileDir
 ) {
 
     companion object {
@@ -85,68 +80,8 @@ class FileShareBlockAndroid (
 
         val bluetoothManager = activity.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         gattScanner = GattScanner(bluetoothManager.adapter.bluetoothLeScanner, this.notifier)
-        val bleScanner = object: BleScannerInterface {
-            override fun setServiceUuid(uuid: UUID) {
-                gattScanner.setServiceUuid(uuid)
-            }
-
-            override fun startScan() {
-                gattScanner.startScanPeriodic()
-            }
-
-            override fun stopScan() {
-                gattScanner.stopScan()
-            }
-        }
-
         gattServer = GattServer(context, bluetoothManager)
-        val bleService = object: BleServiceInterface {
-            override var referenceData: String
-                get() { return gattServer.referenceData }
-                set(value) { gattServer.referenceData = value }
-            override var callbackOnReferenceDataReception: ( flag: Boolean, name: String ) -> Unit
-                get() { return {_: Boolean, _: String -> } }
-                set(value) { gattServer.callbackOnReferenceDataReception = value }
-
-            override fun setServiceUuid(uuid: UUID) {
-                gattServer.setServiceUuid(uuid)
-            }
-
-            override fun setCharacteristicUuid(uuid: UUID) {
-                gattServer.setCharacteristicUuid(uuid)
-            }
-
-            override fun startService() {
-                gattServer.startBleService()
-            }
-
-            override fun stopService() {
-                gattServer.stopBleService()
-            }
-        }
-
-        gattClient = GattClient(context, bluetoothManager)
-        val bleClient = object: BleClientInterface {
-            override var dataToSend: String
-                get() { return gattClient.dataToSend }
-                set(value) { gattClient.dataToSend = value }
-            override var callbackOnDataSend: ( _: Boolean) -> Unit
-                get() { return {  _: Boolean -> } }
-                set(value) { gattClient.callbackOnDataSend = value }
-
-            override fun setServiceUuid(uuid: UUID) {
-                gattClient.setServiceUuid(uuid)
-            }
-
-            override fun setCharacteristicUuid(uuid: UUID) {
-                gattClient.setCharacteristicUuid(uuid)
-            }
-
-            override fun disconnect() {
-                gattClient.disconnect()
-            }
-        }
-        super.configureBle(bleScanner, bleService, bleClient)
+        gattClient = GattClient(context)
 
         val wifi = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
         val multicastLock = wifi.createMulticastLock("multicastLock")
@@ -157,13 +92,68 @@ class FileShareBlockAndroid (
     override val setDeviceInfoCommon = { device: DeviceInfoCommon, index: Int ->
         Log.d(TAG,"setDeviceInfo(), selectedDeviceInfoCommon = $device, index = $index")
         selectedDeviceInfo = gattScanner.getDevice(index)
+        selectedDeviceIndex = index
+    }
+
+    override fun configBleService(
+        serviceUuid: UUID,
+        characteristicUuid: UUID,
+        createServerCommand: String,
+        destroyServerCommand: String,
+        createServerCallback: (name: String) -> Unit,
+        destroyServerCallback: () -> Unit,
+    ) {
+        gattServer.setServiceUuid(serviceUuid)
+        gattServer.setCharacteristicUuid(characteristicUuid)
+        gattServer.createServerCommand = createServerCommand
+        gattServer.destroyServerCommand = destroyServerCommand
+        gattServer.createServerCallback = createServerCallback
+        gattServer.destroyServerCallback = destroyServerCallback
+    }
+
+    override fun startBleService() {
+        gattServer.startBleService()
+    }
+
+    override fun stopBleService() {
+        gattServer.stopBleService()
+    }
+
+    override fun configBleScanner(serviceUuid: UUID) {
+        gattScanner.setServiceUuid(serviceUuid)
+    }
+
+    override fun startBleScanner() {
+        gattScanner.startScanPeriodic()
+    }
+
+    override fun stopBleScanner() {
+        gattScanner.stopScan()
+    }
+
+    override fun configBleClient(
+        serviceUuid: UUID,
+        characteristicUuid: UUID,
+        callback: (flag: Boolean) -> Unit
+    ) {
+        gattClient.setServiceUuid(serviceUuid)
+        gattClient.setCharacteristicUuid(characteristicUuid)
+        gattClient.callbackOnDataSend = callback
+
+    }
+
+    override fun setBleClientDataToSend(data: String) {
+        gattClient.dataToSend = data
+    }
+
+    override fun disconnectBleClient() {
+        gattClient.disconnect()
     }
 
     override fun setMcDnsServiceName(name: String) {
         lnsService.serviceName = name
     }
 
-    // override suspend fun registerMcDnsService() {
     override fun registerMcDnsService() {
         lnsService.registerService()
     }
@@ -186,6 +176,10 @@ class FileShareBlockAndroid (
         val deviceInfoAndroid = info as DeviceInfoAndroid
         Log.d(TAG, "deviceInfoAndroid = $deviceInfoAndroid")
         gattClient.connect((info).bleScanResult!!)
+    }
+
+    override fun sendMessageBleClient(message: String) {
+        gattClient.sendMessage(message)
     }
 
     private fun geFilePacketDescriptorFromIntent(intent: Intent) {

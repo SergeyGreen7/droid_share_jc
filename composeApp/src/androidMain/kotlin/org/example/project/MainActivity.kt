@@ -2,9 +2,6 @@ package org.example.project
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
@@ -19,7 +16,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
-import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import org.example.project.fragments.FileSharingRole
 import org.example.project.ui.GetMainView
@@ -29,8 +25,8 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
-        private const val CHANNEL_ID = "notification_channel_1"
-        private const val notificationId = 111
+//        private const val CHANNEL_ID = "notification_channel_1"
+//        private const val notificationId = 111
     }
 
     private lateinit var fileShareBlock: FileShareBlockAndroid
@@ -51,32 +47,31 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun createFgServiceChannel(context: Context) {
-        val channel =
-            NotificationChannel("channel_id", "Channel Name", NotificationManager.IMPORTANCE_MIN)
-        val mNotificationManager =
-            context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        mNotificationManager.createNotificationChannel(channel)
-    }
+//    private fun createFgServiceChannel(context: Context) {
+//        val channel =
+//            NotificationChannel("channel_id", "Channel Name", NotificationManager.IMPORTANCE_MIN)
+//        val mNotificationManager =
+//            context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+//        mNotificationManager.createNotificationChannel(channel)
+//    }
 
-    fun getServiceNotification(context: Context): Notification {
-        val mBuilder = NotificationCompat.Builder(context, "channel_id");
-        mBuilder.setContentTitle("One line text");
-        // mBuilder.setSmallIcon(R.drawable.ic_notification);
-        mBuilder.setProgress(0, 0, true);
-        mBuilder.setOngoing(true);
-        return mBuilder.build();
-    }
+//    fun getServiceNotification(context: Context): Notification {
+//        val mBuilder = NotificationCompat.Builder(context, "channel_id")
+//        mBuilder.setContentTitle("One line text")
+//        // mBuilder.setSmallIcon(R.drawable.ic_notification)
+//        mBuilder.setProgress(0, 0, true)
+//        mBuilder.setOngoing(true)
+//        return mBuilder.build()
+//    }
 
     @SuppressLint("MissingPermission")
     private fun initApp() {
 
-        getServiceNotification(this)
+        // getServiceNotification(this)
 
         fileShareBlock = FileShareBlockAndroid(
             this,
             this,
-            getFileSharingRole(intent),
             Environment.getExternalStorageDirectory().toString() + "/Download/",
         )
         fileShareBlock.init()
@@ -118,12 +113,9 @@ class MainActivity : ComponentActivity() {
         fileShareBlock.resolveNewIntent(intent)
     }
 
-        private fun getFileSharingRole(intent: Intent) : FileSharingRole {
-        return if (intent.action in listOf(Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE)) {
-            FileSharingRole.FILE_TRANSMITTER
-        } else {
-            FileSharingRole.FILE_RECEIVER
-        }
+    override fun onDestroy() {
+        super.onDestroy()
+        fileShareBlock.stopAndDestroy()
     }
 
     @RequiresApi(Build.VERSION_CODES.S)
@@ -147,8 +139,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @SuppressLint("MissingPermission")
-    private fun createNotification() {
+//    @SuppressLint("MissingPermission")
+//    private fun createNotification() {
 //        createNotificationChannel()
 //
 //        // Create an explicit intent for an Activity in your app.
@@ -210,9 +202,9 @@ class MainActivity : ComponentActivity() {
 //            // notificationId is a unique int for each notification that you must define.
 //            notify(notificationId, builder.build())
 //        }
-    }
+//    }
 
-    private fun createNotificationChannel() {
+//    private fun createNotificationChannel() {
 //        // Create the NotificationChannel, but only on API 26+ because
 //        // the NotificationChannel class is not in the Support Library.
 //        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -227,5 +219,5 @@ class MainActivity : ComponentActivity() {
 //                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 //            notificationManager.createNotificationChannel(channel)
 //        }
-    }
+//    }
 }

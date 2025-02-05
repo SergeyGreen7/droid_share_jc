@@ -125,7 +125,7 @@ class GattScanner (
                 var cntr = 0
                 for (i in 0..NUM_SCAN_PERIODS) {
                     delay(BLE_SCAN_PERIOD_MULTIPLE)
-                    Log.d(TAG, "startScanPeriodic, show found BLE nodes" +
+                    Log.d(TAG, "startScanPeriodic, show found BLE nodes, " +
                         "devices.size = ${devices.size}, cntr = $cntr")
                     if (cntr++ % 5 == 0) {
                         withContext(Dispatchers.Main) {
@@ -158,14 +158,15 @@ class GattScanner (
 
     @SuppressLint("MissingPermission")
     private fun configureAndRunScanner() {
+        println("start configureAndRunScanner(), serviceUuid = $serviceUuid")
         val scanFilter = ScanFilter.Builder()
             .setServiceUuid(ParcelUuid(serviceUuid))
             .build()
         val filters = mutableListOf<ScanFilter>(scanFilter)
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-            .build();
-        scanner.startScan(filters, settings, scanCallback);
+            .build()
+        scanner.startScan(filters, settings, scanCallback)
     }
 
     private fun showDiscoveredDevices() {

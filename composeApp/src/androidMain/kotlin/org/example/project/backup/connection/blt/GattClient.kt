@@ -7,19 +7,16 @@ import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattCharacteristic.*
 import android.bluetooth.BluetoothGattDescriptor
-import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.BluetoothStatusCodes
 import android.bluetooth.le.ScanResult
 import android.content.Context
 import android.util.Log
 import org.example.project.connection.GattServer.Companion.DEFAULT_UUID
-//import org.example.project.MainActivity_.Companion
 import java.util.UUID
 
 class GattClient(
     private val context: Context,
-    private val manager: BluetoothManager,
 ) {
 
     companion object {
@@ -296,6 +293,15 @@ class GattClient(
             connectCounter = 0
             targetGatt = null
         }
+    }
+
+    fun sendMessage(message: String) {
+        println("start sendMessage()")
+        if (targetGatt == null) {
+            println("sendMessage(), no target GATT for message sending")
+            return
+        }
+        sendMessage(targetGatt!!, message)
     }
 
     private fun hasPermission(c: BluetoothGattCharacteristic, permission: Int): Boolean {
