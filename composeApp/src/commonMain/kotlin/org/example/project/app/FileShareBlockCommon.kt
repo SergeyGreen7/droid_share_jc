@@ -216,15 +216,6 @@ abstract class FileShareBlockCommon (
 
     private fun disconnectFunc() {
         println("start disconnect()")
-//        when (role) {
-//            FileSharingRole.FILE_TRANSMITTER -> {
-//                stopBleScanner()
-//                mcDnsScanner.stopScan()
-//            }
-//            FileSharingRole.FILE_RECEIVER -> {
-//                unregisterMcDnsService()
-//            }
-//        }
         stopBleScanner()
         mcDnsScanner.stopScan()
         unregisterMcDnsService()
