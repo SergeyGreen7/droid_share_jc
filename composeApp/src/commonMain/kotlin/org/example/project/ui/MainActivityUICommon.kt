@@ -29,13 +29,12 @@ import io.github.vinceglb.filekit.core.PlatformFiles
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.example.project.connection.mcdns.McDnsScanner
-import org.example.project.connection.mcdns.McDnsService
 import org.example.project.data.DeviceInfoCommon
 
-var bleButtonVisible = false
 var bleServiceEnabled = mutableStateOf(false)
 var bleScannerEnabled = mutableStateOf(false)
+var sendDataButtonIsActive = mutableStateOf(false)
+var selectedIndex = mutableStateOf(-1)
 var nameStr = mutableStateOf("")
 var fileStr = mutableStateOf("file(s) not selected")
 var deviceList = mutableStateListOf<DeviceInfoCommon>()
@@ -48,7 +47,9 @@ fun GetMainView(
     bleScannerCallback: (isEnabled:Boolean) -> Unit,
     sendDataCallback: () -> Unit,
     setDeviceInfoCallback: (device: DeviceInfoCommon, index: Int) -> Unit,
-    createFileDscrList: (files: PlatformFiles?) -> Unit
+    createFileDscrList: (files: PlatformFiles?) -> Unit,
+    registerMcDnsService: (flag: Boolean) -> Unit,
+    enableMcDnsScanner: (flag: Boolean) -> Unit,
 ) {
     MyAlertDialog()
     MyProgressDialog()
@@ -60,7 +61,9 @@ fun GetMainView(
             bleServiceCallback,
             bleScannerCallback,
             sendDataCallback,
-            createFileDscrList)
+            createFileDscrList,
+            registerMcDnsService,
+            enableMcDnsScanner)
     }
 
     ShowSnackBar(true, 3000)
@@ -71,16 +74,18 @@ fun GetButtons(
     bleEnableServiceCallback: (isEnabled:Boolean) -> Unit,
     bleEnableScannerCallback: (isEnabled:Boolean) -> Unit,
     sendDataCallback: () -> Unit,
-    createFileDscrList: (files: PlatformFiles?) -> Unit
+    createFileDscrList: (files: PlatformFiles?) -> Unit,
+    registerMcDnsService: (flag: Boolean) -> Unit,
+    enableMcDnsScanner: (flag: Boolean) -> Unit,
 ) {
     val enableBleServiceStr = "Enable Receiver"
     val disableBleServiceStr = "Disable Receiver"
     // val enableBleScannerStr = "Enable BLE Scanner"
     // val disableBleScannerStr = "Disable BLE Scanner"
 
-    // val bleButtonVisible by remember { mutableStateOf(bleButtonVisible) }
     var bleServiceEnabled by remember{ bleServiceEnabled }
     var bleScannerEnabled by remember{ bleScannerEnabled }
+    var  sendDataButtonIsActive by remember{ sendDataButtonIsActive }
     val nameStr by remember{ nameStr }
     val fileStr by remember{ fileStr }
     var bleServiceButtonText by remember{ mutableStateOf(enableBleServiceStr) }
@@ -89,9 +94,7 @@ fun GetButtons(
     // tmp
     val showDebugButtons = false
     var scannerButtonText by remember { mutableStateOf("Start MC DNS Discovery") }
-    val serviceScanner by remember { mutableStateOf(McDnsScanner()) }
     var serviceButtonText by remember { mutableStateOf("Start MC DNS Service") }
-    val service by remember { mutableStateOf(McDnsService("android-")) }
 
 
     val filePicker = rememberFilePickerLauncher(mode = PickerMode.Multiple()) { files ->
@@ -112,6 +115,18 @@ fun GetButtons(
             }
             Spacer(modifier = Modifier.width(20.dp))
             Button(
+                onClick = {
+                    sendDataCallback()
+                },
+                enabled = sendDataButtonIsActive
+            ) {
+                Text(text = "Send Data")
+            }
+        }
+
+        if (showDebugButtons) {
+            Row() {
+                Button(
                 onClick = {
                     bleServiceButtonText = if (!bleServiceEnabled) {
                         disableBleServiceStr
@@ -138,9 +153,7 @@ fun GetButtons(
             ) {
                 Text(text = bleScannerButtonText.value)
             }
-        }
-
-        if (showDebugButtons) {
+            }
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -187,10 +200,10 @@ fun GetButtons(
                     onClick = {
                         if (scannerButtonText == "Start MC DNS Discovery") {
                             scannerButtonText = "Stop MC DNS Discovery"
-                            serviceScanner.startScan()
+                            enableMcDnsScanner(true)
                         } else {
                             scannerButtonText = "Start MC DNS Discovery"
-                            serviceScanner.stopScan()
+                            enableMcDnsScanner(false)
                         }
                     },
                 ) {
@@ -203,25 +216,17 @@ fun GetButtons(
                             serviceButtonText = "Stop MC DNS Service"
 
                             CoroutineScope(Dispatchers.IO).launch {
-                                service.registerService()
+                                registerMcDnsService(true)
                             }
                         } else {
                             serviceButtonText = "Start MC DNS Service"
-                            service.unregisterService()
+                            registerMcDnsService(false)
                         }
                     },
                 ) {
                     Text(text = serviceButtonText)
                 }
             }
-        }
-
-        Button(
-            onClick = {
-                sendDataCallback()
-            },
-        ) {
-            Text(text = "Send Data")
         }
 
         Spacer(modifier = Modifier.width(15.dp))
@@ -242,7 +247,7 @@ fun GetButtons(
 fun GetGrid(
     setDeviceInfoCallback: (device: DeviceInfoCommon, index: Int) -> Unit,
 ) {
-    var selectedIndex by remember { mutableStateOf(-1) }
+    var selectedIndex by remember { selectedIndex }
     val devices = remember { deviceList }
 
     println("run getGrid(), devices.size = ${devices.size}")

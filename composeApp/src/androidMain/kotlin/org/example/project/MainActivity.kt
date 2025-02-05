@@ -1,85 +1,111 @@
 package org.example.project
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
+import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.consumeEach
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.example.project.data.DeviceInfoCommon
-import org.example.project.utils.NotificationInterface
 import org.example.project.fragments.FileSharingRole
-import org.example.project.ui.alertDialogConfirmCallback
-import org.example.project.ui.alertDialogDismissCallback
-import org.example.project.ui.alertDialogText
-import org.example.project.ui.alertDialogTitle
 import org.example.project.ui.GetMainView
-import org.example.project.ui.progressDialogCancelCallback
-import org.example.project.ui.progressDialogProgressValue
-import org.example.project.ui.progressDialogTitle
-import org.example.project.ui.shouldShowAlertDialog
-import org.example.project.ui.shouldShowProgressDialog
-import org.example.project.ui.showSnackbar
-import org.example.project.ui.snackbarMessage
+
 
 class MainActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
-        // private const val REQUEST_ENABLE_BT = 1
-        // var txFilePackDscr = TxFilePackDescriptor()
+        private const val CHANNEL_ID = "notification_channel_1"
+        private const val notificationId = 111
     }
 
-    // private var progressDialog: ProgressDialog? = null
-    // private var alertDialog: AlertDialog? = null
-
-    private var fileShareBlock: FileShareBlockAndroid? = null
+    private lateinit var fileShareBlock: FileShareBlockAndroid
     private var startIntentResolved = false
 
+    @RequiresApi(Build.VERSION_CODES.S)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        requestForPermissions()
+
+        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        if (!bluetoothManager.adapter.isEnabled) {
+            val intent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            btEnableLauncher.launch(intent)
+        } else {
+            initApp()
+        }
+    }
+
+    private fun createFgServiceChannel(context: Context) {
+        val channel =
+            NotificationChannel("channel_id", "Channel Name", NotificationManager.IMPORTANCE_MIN)
+        val mNotificationManager =
+            context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        mNotificationManager.createNotificationChannel(channel)
+    }
+
+    fun getServiceNotification(context: Context): Notification {
+        val mBuilder = NotificationCompat.Builder(context, "channel_id");
+        mBuilder.setContentTitle("One line text");
+        // mBuilder.setSmallIcon(R.drawable.ic_notification);
+        mBuilder.setProgress(0, 0, true);
+        mBuilder.setOngoing(true);
+        return mBuilder.build();
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun initApp() {
+
+        getServiceNotification(this)
 
         fileShareBlock = FileShareBlockAndroid(
             this,
             this,
             getFileSharingRole(intent),
-            Environment.getExternalStorageDirectory().toString() + "/Download/")
-        fileShareBlock?.config(notifier)
-        fileShareBlock?.onCreate()
+            Environment.getExternalStorageDirectory().toString() + "/Download/",
+        )
+        fileShareBlock.init()
 
-        LocalBroadcastManager.getInstance(this).
-        registerReceiver(fileShareBlock?.bluetoothController!!.receiver, IntentFilter(
-            BluetoothDevice.ACTION_FOUND)
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            fileShareBlock.bluetoothController.receiver,
+            IntentFilter(BluetoothDevice.ACTION_FOUND)
         )
 
         setContent {
             GetMainView(
-                fileShareBlock!!.enableBleServiceCallback,
-                fileShareBlock!!.enableBleScannerCallback,
-                fileShareBlock!!.sendDataCallback,
-                fileShareBlock!!.setDeviceInfoCommon,
-                fileShareBlock!!.getFileDescriptorFromPicker,
+                fileShareBlock.enableBleServiceCallback,
+                fileShareBlock.enableBleScannerCallback,
+                fileShareBlock.sendDataCallback,
+                fileShareBlock.setDeviceInfoCommon,
+                fileShareBlock.getFileDescriptorFromPicker,
+                fileShareBlock.registerMcDnsServiceDebug,
+                fileShareBlock.enableMcDnsScannerDebug,
             )
         }
-    }
 
-    override fun onStart() {
         super.onStart()
 
         if (!startIntentResolved) {
             onNewIntent(intent)
             startIntentResolved = true
         }
+
+        // createNotification()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -89,7 +115,7 @@ class MainActivity : ComponentActivity() {
         Log.d(TAG, "MainActivity, start on onNewIntent()")
         Log.d(TAG, "MainActivity, intent.action = ${intent.action}")
 
-        fileShareBlock?.resolveNewIntent(intent)
+        fileShareBlock.resolveNewIntent(intent)
     }
 
         private fun getFileSharingRole(intent: Intent) : FileSharingRole {
@@ -100,78 +126,106 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val channel = Channel<Job>(capacity = Channel.UNLIMITED).apply {
-        CoroutineScope(Dispatchers.Main).launch {
-            consumeEach { it.join() }
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun requestForPermissions() {
+        val permissions = listOf(
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.MANAGE_EXTERNAL_STORAGE,
+        )
+        requestPermissions(permissions.toTypedArray(), 100)
+    }
+
+    private var btEnableLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            initApp()
+        } else {
+            finish()
         }
     }
 
-    private val notifier = object: NotificationInterface {
-        override suspend fun updateProgressDialog(progress: Float) {
-            withContext(Dispatchers.Main) {
-                progressDialogProgressValue.floatValue = progress
-            }
-        }
+    @SuppressLint("MissingPermission")
+    private fun createNotification() {
+//        createNotificationChannel()
+//
+//        // Create an explicit intent for an Activity in your app.
+//        val intent = Intent(this, MainActivity::class.java).apply {
+//            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+//        }
+//        val pendingIntent: PendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+//
+//        val ACTION_SNOOZE = "stop"
+//        val EXTRA_NOTIFICATION_ID = "123123"
+//        val snoozeIntent = Intent(this, MainActivity::class.java).apply {
+//            action = ACTION_SNOOZE
+//            putExtra(EXTRA_NOTIFICATION_ID, 0)
+//        }
+//        val snoozePendingIntent: PendingIntent =
+//            PendingIntent.getBroadcast(this, 0, snoozeIntent, 0)
+//
+//        val builder = NotificationCompat.Builder(this, CHANNEL_ID).apply {
+//            setContentTitle("Picture Download")
+//            setContentText("Download in progress")
+//            setSmallIcon(R.drawable.baseline_add_reaction_24)
+//            setPriority(NotificationCompat.PRIORITY_LOW)
+//            setContentIntent(pendingIntent)
+//            setAutoCancel(true)
+//            setOnlyAlertOnce(true)
+//            addAction(R.drawable.baseline_back_hand_24,
+//                "pause",
+//                snoozePendingIntent)
+//        }
+//        val PROGRESS_MAX = 100
+//        val PROGRESS_CURRENT = 0
+//
+//        NotificationManagerCompat.from(this).apply {
+//            // Issue the initial notification with zero progress.
+//            builder.setProgress(PROGRESS_MAX, PROGRESS_CURRENT, false)
+//            notify(notificationId, builder.build())
+//
+//            // Do the job that tracks the progress here.
+//            // Usually, this is in a worker thread.
+//            // To show progress, update PROGRESS_CURRENT and update the notification with:
+//            // builder.setProgress(PROGRESS_MAX, PROGRESS_CURRENT, false);
+//            // notificationManager.notify(notificationId, builder.build());
+//
+//            CoroutineScope(Dispatchers.IO).launch {
+//                for (i in 0..100) {
+//                    delay(1000)
+//                    builder.setProgress(PROGRESS_MAX, i, false)
+//                    notify(notificationId, builder.build())
+//                }
+//
+//                // When done, update the notification once more to remove the progress bar.
+//                builder.setContentText("Download complete")
+//                    .setProgress(0, 0, false)
+//                notify(notificationId, builder.build())
+//            }
+//        }
+//
+//        with(NotificationManagerCompat.from(this)) {
+//            // notificationId is a unique int for each notification that you must define.
+//            notify(notificationId, builder.build())
+//        }
+    }
 
-        override suspend fun dismissProgressDialog() {
-            withContext(Dispatchers.Main) {
-                shouldShowProgressDialog.value = false
-            }
-        }
-
-        override suspend fun showProgressDialog(
-            title: String,
-            cancelCallback: () -> Unit
-        ) {
-            withContext(Dispatchers.Main) {
-                progressDialogTitle.value = title
-                progressDialogCancelCallback.value = cancelCallback
-                progressDialogProgressValue.floatValue = 0.0F
-                shouldShowProgressDialog.value = true
-            }
-        }
-
-        override fun showNotification(message: String) {
-            CoroutineScope(Dispatchers.Main).launch {
-                snackbarMessage.value = message
-                showSnackbar.value = true
-            }
-        }
-
-        override suspend fun showAlertDialog(
-            message: String,
-            confirmCallback: () -> Unit,
-            dismissCallback: () -> Unit
-        ) {
-            channel.trySend(
-                CoroutineScope(Dispatchers.Main).launch {
-                    alertDialogTitle.value = ""
-                    alertDialogText.value = message
-                    alertDialogConfirmCallback.value = confirmCallback
-                    alertDialogDismissCallback.value = dismissCallback
-                    shouldShowAlertDialog.value = true
-                }
-            )
-        }
-
-        override fun dismissAlertDialog() {
-            channel.trySend(
-                CoroutineScope(Dispatchers.Main).launch {
-                    shouldShowAlertDialog.value = false
-                }
-            )
-        }
-
-        override fun cancelConnection() {
-            TODO("Not yet implemented")
-        }
-
-        override suspend fun disconnect() {
-            // TODO("Not yet implemented")
-        }
-
-        override fun onDeviceListUpdate(deviceList: List<DeviceInfoCommon>) {
-            TODO("Not yet implemented")
-        }
+    private fun createNotificationChannel() {
+//        // Create the NotificationChannel, but only on API 26+ because
+//        // the NotificationChannel class is not in the Support Library.
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//            val name = "notification_channel"
+//            val descriptionText = "notification_channel_descriptor"
+//            val importance = NotificationManager.IMPORTANCE_DEFAULT
+//            val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
+//                description = descriptionText
+//            }
+//            // Register the channel with the system.
+//            val notificationManager: NotificationManager =
+//                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+//            notificationManager.createNotificationChannel(channel)
+//        }
     }
 }

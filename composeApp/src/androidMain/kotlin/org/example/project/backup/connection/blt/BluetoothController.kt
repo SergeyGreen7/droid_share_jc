@@ -289,9 +289,9 @@ class BluetoothController(
         gattScanner.stopScan()
     }
 
-    fun getDevice(index: Int): DeviceInfoAndroid {
-        return gattScanner.getDevice(index)
-    }
+//    fun getDevice(index: Int): DeviceInfoAndroid {
+//        return gattScanner.getDevice(index)
+//    }
 }
 
 class BleService : Service() {

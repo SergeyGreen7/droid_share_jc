@@ -174,8 +174,12 @@ class GattScanner (
         }
     }
 
-    fun getDevice(index: Int): DeviceInfoAndroid {
-        return devices.map{ DeviceInfoAndroid(it.value) }[index]
+    fun getDevice(index: Int): DeviceInfoAndroid? {
+        return if (index < devices.size) {
+            devices.map { DeviceInfoAndroid(it.value) }[index]
+        } else {
+            null
+        }
     }
 
 }

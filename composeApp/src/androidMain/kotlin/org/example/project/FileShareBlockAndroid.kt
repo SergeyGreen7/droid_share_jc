@@ -2,7 +2,6 @@ package org.example.project
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Context.NSD_SERVICE
@@ -14,7 +13,6 @@ import android.net.wifi.WifiManager
 import android.provider.OpenableColumns
 import android.util.Log
 
-import androidx.core.app.ActivityCompat
 import io.github.vinceglb.filekit.core.PlatformFiles
 
 import org.example.project.connection.BluetoothController
@@ -23,7 +21,6 @@ import org.example.project.connection.GattScanner
 import org.example.project.connection.GattServer
 import org.example.project.connection.LnsService
 import org.example.project.data.DeviceInfoCommon
-import org.example.project.utils.NotificationInterface
 import org.example.project.utils.TxFileDescriptor
 import org.example.project.fragments.FileShareBlockCommon
 import org.example.project.fragments.FileSharingRole
@@ -34,7 +31,7 @@ import org.example.project.utils.BleServiceInterface
 import java.io.InputStream
 import java.util.UUID
 
-open class FileShareBlockAndroid (
+class FileShareBlockAndroid (
     private val context: Context,
     private val activity: Activity,
     role: FileSharingRole,
@@ -45,7 +42,6 @@ open class FileShareBlockAndroid (
 
     companion object {
         private const val TAG = "FileShareFragment"
-        const val REQUEST_ENABLE_BT = 1
     }
 
     private lateinit var gattClient: GattClient
@@ -54,8 +50,12 @@ open class FileShareBlockAndroid (
 
     private lateinit var lnsService: LnsService
 
+    private var bluetoothManager: BluetoothManager =
+        activity.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+
     lateinit var bluetoothController: BluetoothController
 
+    @SuppressLint("MissingPermission")
     override fun onCreate() {
         super.onCreate()
 
@@ -71,74 +71,17 @@ open class FileShareBlockAndroid (
         +"\nPRODUCT: "+android.os.Build.PRODUCT)
         Log.d(TAG, "$sb")
 
+        bluetoothController = BluetoothController(context, bluetoothManager, notifier)
+
         val nsdManager = activity.getSystemService(NSD_SERVICE) as NsdManager
         lnsService = LnsService(nsdManager)
 
-        val bluetoothManager = activity.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-         bluetoothController = BluetoothController(context, bluetoothManager, notifier)
-//        activity.registerReceiver(bluetoothController.receiver, IntentFilter(
-//            BluetoothDevice.ACTION_FOUND)
-//        )
-
-        if (!bluetoothController.isBluetoothEnabled()) {
-            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            ActivityCompat.startActivityForResult(activity, enableBtIntent, REQUEST_ENABLE_BT, null)
-        }
-
-        Log.d(TAG, "FileShareFragment, start onViewCreated()")
-        nameStr.value = "Your name: ${bluetoothController.getName()}"
-        connectionManager.setTransmitterName(bluetoothController.getName())
+        val name = bluetoothManager.adapter.name
+        nameStr.value = "Your name: $name"
+        connectionManager.setTransmitterName(name)
     }
 
-    override fun config(notifier: NotificationInterface) {
-        this.notifier = object: NotificationInterface {
-            override suspend fun showProgressDialog(
-                title: String,
-                cancelCallback: () -> Unit
-            ) {
-                notifier.showProgressDialog(title, cancelCallback)
-            }
-
-            override suspend fun updateProgressDialog(progress: Float) {
-                notifier.updateProgressDialog(progress)
-            }
-
-            override suspend fun dismissProgressDialog() {
-                notifier.dismissProgressDialog()
-            }
-
-            override fun showNotification(message: String) {
-                notifier.showNotification(message)
-            }
-
-            override suspend fun showAlertDialog(
-                message: String,
-                confirmCallback: () -> Unit,
-                dismissCallback: () -> Unit
-            ) {
-                notifier.showAlertDialog(message, confirmCallback, dismissCallback)
-            }
-
-            override fun dismissAlertDialog() {
-                notifier.dismissAlertDialog()
-            }
-
-            override fun cancelConnection() {
-                this@FileShareBlockAndroid.cancelConnection()
-            }
-
-            override suspend fun disconnect() {
-                this@FileShareBlockAndroid.disconnect()
-            }
-
-            override fun onDeviceListUpdate(deviceList: List<DeviceInfoCommon>) {
-                Log.d(TAG, "onDeviceListUpdate, deviceList.size = ${org.example.project.ui.deviceList.size}")
-                org.example.project.ui.deviceList.clear()
-                deviceList.forEach {
-                    org.example.project.ui.deviceList.add(it)
-                }
-            }
-        }
+    override fun config() {
 
         val bluetoothManager = activity.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         gattScanner = GattScanner(bluetoothManager.adapter.bluetoothLeScanner, this.notifier)
@@ -220,7 +163,8 @@ open class FileShareBlockAndroid (
         lnsService.serviceName = name
     }
 
-    override suspend fun registerMcDnsService() {
+    // override suspend fun registerMcDnsService() {
+    override fun registerMcDnsService() {
         lnsService.registerService()
     }
 
@@ -229,9 +173,11 @@ open class FileShareBlockAndroid (
     }
 
     fun resolveNewIntent(intent: Intent) {
+        println("start resolveNewIntent, intent = $intent")
         if (intent.action !in listOf(Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE)){
             return
         }
+        println("run geFilePacketDescriptorFromIntent()")
         geFilePacketDescriptorFromIntent(intent)
         gattScanner.startScanPeriodic()
     }
@@ -242,7 +188,6 @@ open class FileShareBlockAndroid (
         gattClient.connect((info).bleScanResult!!)
     }
 
-    @SuppressLint("Range")
     private fun geFilePacketDescriptorFromIntent(intent: Intent) {
         Log.d(TAG, "start resolveIntent()")
         val uriList = mutableListOf<Uri>()
@@ -267,48 +212,50 @@ open class FileShareBlockAndroid (
 
         txFiles.clear()
         for (uri in uriList) {
-            val cursor = context.contentResolver
-                ?.query(uri, null, null, null, null)  as Cursor
-            cursor.moveToFirst()
-            val fileName = cursor.getString(
-                cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)) as String
-            val fileSize = cursor.getString(
-                cursor.getColumnIndex(OpenableColumns.SIZE))?.toInt() as Int
-            cursor.close()
-            val inputStream = context.contentResolver?.openInputStream(uri) as InputStream
+            addFileDescriptor(uri)
+        }
 
-            txFiles.add(TxFileDescriptor(fileName, fileSize, inputStream))
+        if (txFiles.isNotEmpty()) {
+            sendDataButtonIsActive.value = true
+            fileStr.value = "file(s) selected"
         }
     }
 
-    @SuppressLint("Range")
     override var getFileDescriptorFromPicker = { files: PlatformFiles? ->
+        enableBleScannerCallback(false)
+        sendDataButtonIsActive.value = false
+        deviceList.clear()
+
         txFiles.clear()
         if (!files.isNullOrEmpty()) {
             println("$files")
 
             files.forEach { file ->
-//                println("javaClass = ${file.javaClass}")
                 println("file = $file")
-//                println("path = ${file.path}")
-
-                val uri = file.uri
-                val cursor = context.contentResolver?.
-                    query(uri, null, null, null, null) as Cursor
-                cursor.moveToFirst()
-                val fileName = cursor.getString(
-                    cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME))
-                val fileSize = cursor.getString(
-                    cursor.getColumnIndex(OpenableColumns.SIZE))?.toInt() as Int
-                cursor.close()
-                val inputStream = context.contentResolver?.openInputStream(uri) as InputStream
-
-                println("fileName = $fileName")
-                println("fileSize = $fileSize")
-                println("inputStream = $inputStream")
-                txFiles.add(TxFileDescriptor(fileName, fileSize, inputStream))
+                addFileDescriptor(file.uri)
             }
             fileStr.value = "file(s) selected"
         }
+        
+        enableBleScannerCallback(true)
+        sendDataButtonIsActive.value = true
+    }
+
+    @SuppressLint("Range")
+    private fun addFileDescriptor(uri: Uri) {
+        val cursor = context.contentResolver?.
+        query(uri, null, null, null, null) as Cursor
+        cursor.moveToFirst()
+        val fileName = cursor.getString(
+            cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME))
+        val fileSize = cursor.getString(
+            cursor.getColumnIndex(OpenableColumns.SIZE))?.toInt() as Int
+        cursor.close()
+        val inputStream = context.contentResolver?.openInputStream(uri) as InputStream
+
+        println("fileName = $fileName")
+        println("fileSize = $fileSize")
+        println("inputStream = $inputStream")
+        txFiles.add(TxFileDescriptor(fileName, fileSize, inputStream))
     }
 }

@@ -30,12 +30,16 @@ class GattClient(
     var callbackOnDataSend : ((flag: Boolean) -> Unit)? = null
 
     private var isConnected = false
+    private var scanResultInternal: ScanResult? = null
+    private var connectCounter = 0
 
     private var gattClient: BluetoothGatt? = null
     private var gattCharacteristics = mutableListOf<BluetoothGattCharacteristic>()
 
     private var serviceUuid = DEFAULT_UUID
     private var characteristicUuid = DEFAULT_UUID
+
+    private var targetGatt: BluetoothGatt? = null
 
     // tmp
     private var initialized = false
@@ -54,26 +58,28 @@ class GattClient(
             super.onConnectionStateChange(gatt, status, newState)
 
             Log.d(TAG, "GattClient, BluetoothGattCallback(), onConnectionStateChange"
-                    + "status ${GattUtils.getStatus(status)}, newState: $newState")
+                    + ", status ${GattUtils.getStatus(status)}, newState: $newState")
 
-            if (status != BluetoothGatt.GATT_SUCCESS) {
-                disconnect()
-            }
+            // if (status == BluetoothGatt.GATT_SUCCESS) {
+                // disconnect()
+            // }
 
-            if (newState == BluetoothProfile.STATE_CONNECTED) {
-                // successfully connected to the GATT Server
-                // broadcastUpdate(ACTION_GATT_CONNECTED)
-                // connectionState = STATE_CONNECTED
-                // Attempts to discover services after successful connection.
-                isConnected = true
-                // gatt?.discoverServices()
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                if (newState == BluetoothProfile.STATE_CONNECTED) {
+                    // successfully connected to the GATT Server
+                    // broadcastUpdate(ACTION_GATT_CONNECTED)
+                    // connectionState = STATE_CONNECTED
+                    // Attempts to discover services after successful connection.
+                    isConnected = true
+                    // gatt?.discoverServices()
 //                gatt?.mt
-                gatt?.requestMtu(512)
-            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                // disconnected from the GATT Server
-                // broadcastUpdate(ACTION_GATT_DISCONNECTED)
-                // connectionState = STATE_DISCONNECTED
-                disconnect()
+                    gatt?.requestMtu(512)
+                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                    // disconnected from the GATT Server
+                    // broadcastUpdate(ACTION_GATT_DISCONNECTED)
+                    // connectionState = STATE_DISCONNECTED
+                    disconnect()
+                }
             }
         }
 
@@ -82,6 +88,7 @@ class GattClient(
             Log.d(TAG, "GattClient, onServicesDiscovered(), status = $status")
 
             if (status != BluetoothGatt.GATT_SUCCESS) {
+                tryToConnect()
                 return
             }
 
@@ -99,6 +106,8 @@ class GattClient(
                 if (characteristic == null) {
                     Log.d(TAG,"Could not find characteristic: ${characteristicUuid}")
                 } else {
+                    targetGatt = gatt
+
                     Log.d(TAG, "GattClient, set writeType to 'BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT'")
                     Log.d(TAG, "GattClient, run setCharacteristicNotification()")
                     initialized = gatt.setCharacteristicNotification(characteristic, true)
@@ -252,10 +261,26 @@ class GattClient(
         characteristicUuid = uuid
     }
 
-    @SuppressLint("MissingPermission")
     fun connect(scanResult: ScanResult) {
         Log.d(TAG, "GattClient, connect()")
-        gattClient = scanResult.device.connectGatt(
+        scanResultInternal = scanResult
+        tryToConnect()
+//        gattClient = scanResultInternal?.device?.connectGatt(
+//            context, false, gattClientCallback, BluetoothDevice.TRANSPORT_LE)
+//        Log.d(TAG, "gatt: $gattClient")
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun tryToConnect() {
+        if (connectCounter > 10) {
+            disconnect()
+        }
+
+        Log.d(TAG, "GattClient, tryToConnect()")
+        if (scanResultInternal == null) {
+            return
+        }
+        gattClient = scanResultInternal!!.device.connectGatt(
             context, false, gattClientCallback, BluetoothDevice.TRANSPORT_LE)
         Log.d(TAG, "gatt: $gattClient")
     }
@@ -267,6 +292,9 @@ class GattClient(
         if (gattClient != null) {
             gattClient?.disconnect()
             gattClient?.close()
+            scanResultInternal = null
+            connectCounter = 0
+            targetGatt = null
         }
     }
 

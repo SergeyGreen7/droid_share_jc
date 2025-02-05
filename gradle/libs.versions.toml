@@ -1,10 +1,10 @@
 [versions]
 agp = "8.7.3"
-androidx-activityCompose = "1.10.0"
-androidx-lifecycle = "2.8.7"
+androidx-activityCompose = "1.9.3"
+androidx-lifecycle = "2.8.4"
 blessed = "0.64"
-compose-multiplatform = "1.7.1"
-dbusJavaTransportNativeUnixsocket = "5.1.0"
+compose-multiplatform = "1.7.0"
+dbusJavaTransportNativeUnixsocket = "4.3.2"
 filekitCompose = "0.8.8"
 junit = "4.13.2"
 desugar_jdk_libs_minimal = "2.1.4"
@@ -22,6 +22,7 @@ appcompat = "1.7.0"
 material = "1.12.0"
 adaptiveAndroid = "1.0.0"
 material3AdaptiveAndroid = "1.0.0-alpha06"
+core = "1.13.0"
 
 [libraries]
 androidx-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3Android" }
@@ -50,6 +51,7 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-adaptive-android = { group = "androidx.compose.material3.adaptive", name = "adaptive-android", version.ref = "adaptiveAndroid" }
 androidx-material3-adaptive-android = { group = "androidx.compose.material3", name = "material3-adaptive-android", version.ref = "material3AdaptiveAndroid" }
+androidx-core = { group = "androidx.core", name = "core", version.ref = "core" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

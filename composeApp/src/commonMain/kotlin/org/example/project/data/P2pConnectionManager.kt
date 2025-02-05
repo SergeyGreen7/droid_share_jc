@@ -20,12 +20,12 @@ class P2pConnectionManager(
     private var rxJob: Job? = null
     private var txJob: Job? = null
 
-    private var dataTransceiver: DataTransceiver = DataTransceiver(notifier, saveFileDir)
+    private var dataTransceiver: DataTransceiver2 = DataTransceiver2(notifier, saveFileDir)
     // private var txFiles: TxFilesDescriptor = TxFilesDescriptor()
     private var clientServer: TcpP2pClientServer = TcpP2pClientServer()
 
     fun cancelDataTransmission() {
-        println("cancelDataTransmission")
+        println("start cancelDataTransmission()")
         dataTransceiver.cancelDataTransmission()
     }
 

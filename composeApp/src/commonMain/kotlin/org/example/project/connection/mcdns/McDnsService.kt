@@ -12,15 +12,14 @@ class McDnsService (
     companion object {
         const val SERVICE_NAME = "NSD_AQUARIUS"
         const val SERVICE_TYPE = "_aq_fs_service._tcp"
-
         private const val SERVICE_PORT = 8889
     }
 
-    private var isRegistered = false
+    // private var isRegistered = false
     var serviceName = namePrefix + SERVICE_NAME
-    lateinit var service: NetService
+    var service: NetService? = null
 
-    suspend fun registerService() {
+    fun registerService() {
         service = createNetService(
             type = SERVICE_TYPE,
             name = serviceName,
@@ -28,21 +27,24 @@ class McDnsService (
         )
 
         println("McDnsService, start registerService()")
-        if (!isRegistered) {
-            service.register()
-            isRegistered = true
-            println("McDnsService, service is registered")
-            println("   service type: ${service.type}")
-            println("   service name: ${service.name}")
+        if (!service!!.isRegistered.value) {
+            CoroutineScope(Dispatchers.IO).launch {
+                service!!.register()
+                println("McDnsService, service is registered")
+                println("   service type: ${service!!.type}")
+                println("   service name: ${service!!.name}")
+            }
+        } else {
+            println("service is already registered!")
+            println("   service type: ${service!!.type}")
+            println("   service name: ${service!!.name}")
         }
     }
 
     fun unregisterService() {
         CoroutineScope(Dispatchers.IO).launch {
             println("McDnsService, start unregisterService()")
-            if (isRegistered) {
-                service.unregister()
-            }
+            service?.unregister()
         }
     }
 }

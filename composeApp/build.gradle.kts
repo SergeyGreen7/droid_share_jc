@@ -65,11 +65,6 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
-        externalNativeBuild {
-            cmake {
-                cppFlags += ""
-            }
-        }
     }
     packaging {
         resources {
@@ -91,13 +86,6 @@ android {
     dependenciesInfo {
         includeInBundle = true
     }
-    ndkVersion = "28.0.12674087 rc2"
-    externalNativeBuild {
-        cmake {
-            path = file("src/desktopMain/cpp/CMakeLists.txt")
-            version = "3.22.1"
-        }
-    }
 }
 
 dependencies {
@@ -105,11 +93,11 @@ dependencies {
     implementation(libs.androidx.material3.android)
     implementation(libs.androidx.ui.graphics.android)
     implementation(libs.androidx.material3)
-    // implementation(libs.androidx.compose.material)
     implementation(libs.firebase.inappmessaging.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.adaptive.android)
+    implementation(libs.androidx.core)
     // implementation(libs.androidx.material3.adaptive.android)
     debugImplementation(compose.uiTooling)
     coreLibraryDesugaring(libs.desugar.jdk.libs)

@@ -16,8 +16,7 @@ enum class MessageType {
 fun isMessageControl(type: MessageType): Boolean {
     return when(type) {
         MessageType.FILE_COMMON_DSCR,
-        MessageType.FILE,
-        MessageType.PROGRESS_RX -> {
+        MessageType.FILE -> {
             false
         }
         MessageType.CANCEL_TX,
@@ -26,7 +25,8 @@ fun isMessageControl(type: MessageType): Boolean {
         MessageType.TX_REQUEST,
         MessageType.ACCEPT_TX,
         MessageType.DISMISS_TX,
-        MessageType.TEST_MESSAGE,-> {
+        MessageType.TEST_MESSAGE,
+        MessageType.PROGRESS_RX, -> {
             true
         }
     }

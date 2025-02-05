@@ -24,7 +24,7 @@ class LnsService (
     var serviceName = ""
 
     init {
-        serviceInfo.serviceName = "LNS_AQUARIUS-" + (Math.random() * 1000).toInt().toString()
+        serviceInfo.serviceName = "lns_AQUARIUS-" + (Math.random() * 1000).toInt().toString()
 
         serviceInfo.serviceType = SERVICE_TYPE
         serviceInfo.port        = SERVICE_PORT

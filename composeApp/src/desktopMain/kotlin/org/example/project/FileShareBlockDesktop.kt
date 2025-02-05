@@ -5,7 +5,6 @@ import WinBleNativeApi
 import io.github.vinceglb.filekit.core.PlatformFiles
 import org.example.project.connection.mcdns.McDnsService
 import org.example.project.data.DeviceInfoCommon
-import org.example.project.utils.NotificationInterface
 import org.example.project.utils.TxFileDescriptor
 import org.example.project.fragments.FileShareBlockCommon
 import org.example.project.fragments.FileSharingRole
@@ -26,110 +25,22 @@ class FileShareBlockDesktop (
 ) {
 
     private var selectedDeviceIndex = -1
-    private var mcDnsService: McDnsService
+    private var mcDnsService = McDnsService("desktop-")
     private val winBle = WinBleNativeApi()
     private var devices = mutableListOf<DeviceInfoCommon>()
-
-    init {
-        val showDiscoveredDevicesCallback = object: ShowDiscoveredDevicesCallback {
-            override fun run(names: Array<out String>?, addresses: Array<out String>?) {
-                println("showDiscoveredDevicesCallback")
-            }
-        }
-        winBle.configShowDiscoveredDevicesCallback(showDiscoveredDevicesCallback)
-
-        winBle.setServiceUuid("5116c812-ad72-449f-a503-f8662bc21cde")
-        winBle.setCharacterisitcUuid("330fb1d7-afb6-4b00-b5da-3b0feeef9816")
-        winBle.setReferenceData("1234567890")
-        winBle.setDataToSend("1234567890@fs_service-777")
-
-        mcDnsService = McDnsService("default-")
-    }
 
     override fun onCreate() {
         super.onCreate()
 
-//        Log.d(TAG, "FileShareFragment, start onCreate()")
-        // super.onCreate(savedInstanceState)
-
-//        val sb = StringBuilder("MODEL: "+android.os.Build.MODEL
-//        +"\nDEVICE: "+android.os.Build.DEVICE
-//        +"\nBRAND: "+android.os.Build.BRAND
-//        +"\nDISPLAY: "+android.os.Build.DISPLAY
-//        +"\nBOARD: "+android.os.Build.BOARD
-//        +"\nHOST: "+android.os.Build.HOST
-//        +"\nMANUFACTURER: "+android.os.Build.MANUFACTURER
-//        +"\nPRODUCT: "+android.os.Build.PRODUCT);
-//        Log.d(TAG, "$sb")
-
-        // val nsdManager = activity.getSystemService(NSD_SERVICE) as NsdManager
-        // lnsService = LnsService(nsdManager)
-
-//        val bluetoothManager = activity.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-//         bluetoothController = BluetoothController(context, bluetoothManager, notifier)
-//        activity.registerReceiver(bluetoothController.receiver, IntentFilter(
-//            BluetoothDevice.ACTION_FOUND)
-//        )
-
-//        if (!bluetoothController.isBluetoothEnabled()) {
-//            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-//            ActivityCompat.startActivityForResult(activity, enableBtIntent, REQUEST_ENABLE_BT, null)
-//        }
-//
-//        Log.d(TAG, "FileShareFragment, start onViewCreated()")
         nameStr.value = "Your name: ${winBle.hostName}"
         connectionManager.setTransmitterName(winBle.hostName)
     }
 
-    override fun config(notifier: NotificationInterface) {
-        this.notifier = object: NotificationInterface {
-            override suspend fun showProgressDialog(
-                title: String,
-                cancelCallback: () -> Unit
-            ) {
-                notifier.showProgressDialog(title, cancelCallback)
-            }
-
-            override suspend fun updateProgressDialog(progress: Float) {
-                notifier.updateProgressDialog(progress)
-            }
-
-            override suspend fun dismissProgressDialog() {
-                notifier.dismissProgressDialog()
-            }
-
-            override fun showNotification(message: String) {
-                notifier.showNotification(message)
-            }
-
-            override suspend fun showAlertDialog(
-                message: String,
-                confirmCallback: () -> Unit,
-                dismissCallback: () -> Unit
-            ) {
-                notifier.showAlertDialog(message, confirmCallback, dismissCallback)
-            }
-
-            override fun dismissAlertDialog() {
-                notifier.dismissAlertDialog()
-            }
-
-            override fun cancelConnection() {
-                this@FileShareBlockDesktop.cancelConnection()
-            }
-
-            override suspend fun disconnect() {
-                this@FileShareBlockDesktop.disconnect()
-            }
-
-            override fun onDeviceListUpdate(deviceList: List<DeviceInfoCommon>) {
-                println("onDeviceListUpdate, deviceList.size = ${org.example.project.ui.deviceList.size}")
-                org.example.project.ui.deviceList.clear()
-                deviceList.forEach {
-                    org.example.project.ui.deviceList.add(it)
-                }
-            }
-        }
+    override fun config() {
+        winBle.setServiceUuid("5116c812-ad72-449f-a503-f8662bc21cde")
+        winBle.setCharacterisitcUuid("330fb1d7-afb6-4b00-b5da-3b0feeef9816")
+        winBle.setReferenceData("1234567890")
+        winBle.setDataToSend("1234567890@fs_service-777")
 
         val bleScanner = object: BleScannerInterface {
             override fun setServiceUuid(uuid: UUID) {
@@ -232,11 +143,14 @@ class FileShareBlockDesktop (
         mcDnsService.serviceName = name
     }
 
-    override suspend fun registerMcDnsService() {
+    // override suspend fun registerMcDnsService() {
+    override fun registerMcDnsService() {
+        println("start mcDnsService.registerService()")
         mcDnsService.registerService()
     }
 
     override fun unregisterMcDnsService() {
+        println("start mcDnsService.unregisterService()")
         mcDnsService.unregisterService()
     }
 
@@ -248,14 +162,17 @@ class FileShareBlockDesktop (
     }
 
     override var getFileDescriptorFromPicker = { files: PlatformFiles? ->
+
+        enableBleScannerCallback(false)
+        sendDataButtonIsActive.value = false
+        deviceList.clear()
+
         txFiles.clear()
         if (!files.isNullOrEmpty()) {
             println("$files")
 
             files.forEach { file ->
-//                println("javaClass = ${file.javaClass}")
                 println("file = $file")
-//                println("path = ${file.path}")
 
                 val f = file.file
                 val fileName = f.name
@@ -272,5 +189,8 @@ class FileShareBlockDesktop (
             fileStr.value = "file(s) selected"
             println("fileStr = ${fileStr.value}")
         }
+
+        enableBleScannerCallback(true)
+        sendDataButtonIsActive.value = true
     }
 }
