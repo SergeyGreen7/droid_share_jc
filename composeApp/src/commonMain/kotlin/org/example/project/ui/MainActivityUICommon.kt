@@ -46,6 +46,7 @@ fun GetMainView(
     bleServiceCallback: (isEnabled:Boolean) -> Unit,
     bleScannerCallback: (isEnabled:Boolean) -> Unit,
     sendDataCallback: () -> Unit,
+    pairCreationCallback: () -> Unit,
     setDeviceInfoCallback: (device: DeviceInfoCommon, index: Int) -> Unit,
     createFileDscrList: (files: PlatformFiles?) -> Unit,
     registerMcDnsService: (flag: Boolean) -> Unit,
@@ -53,6 +54,7 @@ fun GetMainView(
 ) {
     MyAlertDialog()
     MyProgressDialog()
+    MyNotificationDialog()
 
     Column {
         GetGrid(setDeviceInfoCallback)
@@ -61,6 +63,7 @@ fun GetMainView(
             bleServiceCallback,
             bleScannerCallback,
             sendDataCallback,
+            pairCreationCallback,
             createFileDscrList,
             registerMcDnsService,
             enableMcDnsScanner)
@@ -74,18 +77,17 @@ fun GetButtons(
     bleEnableServiceCallback: (isEnabled:Boolean) -> Unit,
     bleEnableScannerCallback: (isEnabled:Boolean) -> Unit,
     sendDataCallback: () -> Unit,
+    pairCreationCallback: () -> Unit,
     createFileDscrList: (files: PlatformFiles?) -> Unit,
     registerMcDnsService: (flag: Boolean) -> Unit,
     enableMcDnsScanner: (flag: Boolean) -> Unit,
 ) {
     val enableBleServiceStr = "Enable Receiver"
     val disableBleServiceStr = "Disable Receiver"
-    // val enableBleScannerStr = "Enable BLE Scanner"
-    // val disableBleScannerStr = "Disable BLE Scanner"
 
     var bleServiceEnabled by remember{ bleServiceEnabled }
     var bleScannerEnabled by remember{ bleScannerEnabled }
-    var  sendDataButtonIsActive by remember{ sendDataButtonIsActive }
+    val  sendDataButtonIsActive by remember{ sendDataButtonIsActive }
     val nameStr by remember{ nameStr }
     val fileStr by remember{ fileStr }
     var bleServiceButtonText by remember{ mutableStateOf(enableBleServiceStr) }
@@ -122,6 +124,14 @@ fun GetButtons(
             ) {
                 Text(text = "Send Data")
             }
+            Spacer(modifier = Modifier.width(20.dp))
+            Button(
+                onClick = {
+                    pairCreationCallback()
+                },
+            ) {
+                Text(text = "Make Pair")
+            }
         }
 
         if (showDebugButtons) {
@@ -142,11 +152,6 @@ fun GetButtons(
             Spacer(modifier = Modifier.width(20.dp))
             Button(
                 onClick = {
-//                    if (!bleScannerEnabled) {
-//                        bleScannerButtonText = disableBleScannerStr
-//                    } else {
-//                        bleScannerButtonText = enableBleScannerStr
-//                    }
                     bleScannerEnabled = !bleScannerEnabled
                     bleEnableScannerCallback(bleScannerEnabled)
                 },
@@ -249,8 +254,6 @@ fun GetGrid(
 ) {
     var selectedIndex by remember { selectedIndex }
     val devices = remember { deviceList }
-
-    println("run getGrid(), devices.size = ${devices.size}")
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),

@@ -4,6 +4,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.example.project.ClipboardHandler
+import org.example.project.getPlatform
 import org.example.project.utils.DataConverter
 import org.example.project.utils.DataTransferState
 import org.example.project.utils.DataTransferStatus
@@ -20,12 +22,15 @@ import java.io.OutputStream
 import kotlin.math.min
 import kotlin.math.round
 
+
 class DataTransceiver(
     private var notifier : NotificationInterface,
-    saveFileDir: String
+    saveFileDir: String,
+    private val clipboardHandler: ClipboardHandler
 ) {
     private val NUM_BYTES_PER_SIZE = 4
     private val CHUNK_SIZE = 4096
+    private val CLIPBOARD_MAX_SBUFFER_SIZE = CHUNK_SIZE / 2
 //        private const val CHUNK_SIZE = 4096 * 4096
     private val CONTINUE_TX_STR = "CONTINUE_TX"
     private val CONTINUE_TX_BYTES = DataConverter.string2Utf8(CONTINUE_TX_STR)
@@ -52,12 +57,18 @@ class DataTransceiver(
 
     private var fileManager: FileManager = FileManager(saveFileDir)
 
-//    println("inputStream = $inputStream")
-//    println("outputStream = $outputStream")
-//    println("rxState = $rxState")
-//    println("txState = $txState")
-//    println("txFiles = $txFiles")
-//    println("rxFiles = $rxFiles")
+    init {
+        clipboardHandler.setData("test test test - ${getPlatform()}")
+        println("run clipboardHandler.setNewDataHandler()")
+        clipboardHandler.setNewDataHandler() {
+            println("clipboard data is updated")
+            println("new data is '${clipboardHandler.getData()}'")
+            CoroutineScope(Dispatchers.IO).launch {
+                sendClipboardContent()
+            }
+        }
+        clipboardHandler.enable()
+    }
 
     fun setTransmitterName(name: String) {
         transmitterName = name
@@ -82,7 +93,7 @@ class DataTransceiver(
     fun initiateDataTransmission(filePack: TxFilesDescriptor) {
         println("start initiateDataTransmission, filePack.isEmpty() = ${filePack.isEmpty()}")
         println("   txState = $txState, rxState = $rxState")
-        println("   cancellationAfterRequestFlag = $cancellationFlag")
+        println("   cancellationFlag = $cancellationFlag")
         txFiles = filePack.clone()
         println("   txFiles: ")
         println("   $txFiles")
@@ -96,8 +107,44 @@ class DataTransceiver(
         }
     }
 
+    fun initiatePairCreation() {
+        println("start initiatePairCreation")
+        println("   txState = $txState, rxState = $rxState")
+        println("   cancellationFlag = $cancellationFlag")
+
+        txState = DataTransferState.READY_TO_TRANSMIT
+
+        sendPairCreationRequest()
+        if (cancellationFlag) {
+            cancellationFlag = false
+            cancelDataTransmission()
+        }
+    }
+
     private fun sendReceptionProgress(rxProgress: String) {
         sendControlData(RxProgressMessage(rxProgress))
+    }
+
+    fun cancelPairConnection() {
+        println("start cancelPairConnection(), txState = $txState, rxState = $rxState")
+
+        when (txState) {
+            DataTransferState.IDLE -> {
+                cancellationFlag = true
+            }
+            DataTransferState.READY_TO_TRANSMIT,
+            DataTransferState.ACTIVE,
+                 -> {
+                txState = DataTransferState.IDLE
+                CoroutineScope(Dispatchers.IO).launch {
+                    sendPairConnectionClose()
+                    notifier.closeConnection()
+                }
+            }
+            else -> {
+                error("Wrong txState")
+            }
+        }
     }
 
     fun cancelDataTransmission() {
@@ -149,6 +196,22 @@ class DataTransceiver(
         sendControlData(ControlMessage(MessageType.DISMISS_TX))
     }
 
+    private fun sendPairCreationRequest() {
+        sendControlData(PairCreationRequestMessage(transmitterName))
+    }
+
+    private fun sendPairCreationAccept() {
+        sendControlData(ControlMessage(MessageType.ACCEPT_PAIR_CREATION_REQUEST))
+    }
+
+    private fun sendPairCreationDismiss() {
+        sendControlData(ControlMessage(MessageType.DISMISS_PAIR_CREATION_REQUEST))
+    }
+
+    private fun sendPairConnectionClose() {
+        sendControlData(ControlMessage(MessageType.PAIR_CONNECTION_CLOSE))
+    }
+
     private fun sendControlData(message: ControlMessage) {
         if (!isMessageControl(message.type)) {
             throw Exception("Message type ${message.type} is not a control message type")
@@ -159,6 +222,25 @@ class DataTransceiver(
         println("sending message type: ${message.type}, txState = $txState, rxState = $rxState")
         writeToOutStream(message.serialize())
         flushOutput()
+    }
+
+    private fun sendClipboardContent() {
+        println("start sendClipboardContent(), txState = $txState, rxState = $rxState")
+        val dataFromClipboard = clipboardHandler.getData()
+
+        if (outputStream == null || dataFromClipboard.isEmpty() ) {
+            return
+        }
+
+        println("dataFromClipboard = '$dataFromClipboard")
+
+        if (dataFromClipboard.length >= CLIPBOARD_MAX_SBUFFER_SIZE) {
+            println("sendClipboardContent, dataFromClipboard is to big to send into buffer")
+            return
+        }
+
+        writeMessageType(MessageType.CLIPBOARD_CONTENT)
+        writeStringUtf8(dataFromClipboard)
     }
 
     private suspend fun sendFiles() {
@@ -247,6 +329,9 @@ class DataTransceiver(
             MessageType.FILE -> {
                 receiveFile()
             }
+            MessageType.CLIPBOARD_CONTENT -> {
+                receiveClipboardContent()
+            }
             MessageType.PROGRESS_RX -> {
                 receiveProgressRx()
             }
@@ -268,8 +353,17 @@ class DataTransceiver(
             MessageType.DISMISS_TX -> {
                 receiveDismissTx()
             }
-            MessageType.TEST_MESSAGE -> {
-                receiveTestMessage()
+            MessageType.PAIR_CREATION_REQUEST -> {
+                receivePairCreationRequest()
+            }
+            MessageType.ACCEPT_PAIR_CREATION_REQUEST -> {
+                receiveAcceptPairCreation()
+            }
+            MessageType.DISMISS_PAIR_CREATION_REQUEST -> {
+                receiveDismissPairCreation()
+            }
+            MessageType.PAIR_CONNECTION_CLOSE -> {
+                receivePairConnectionClose()
             }
         }
     }
@@ -366,6 +460,20 @@ class DataTransceiver(
         }
     }
 
+    private fun receiveClipboardContent() {
+        println("receive file clipboard content, txState = $txState, rxState = $rxState")
+        if (rxState == DataTransferState.READY_TO_RECEIVE)
+        {
+            val rxDataFromClipboard = readStringUtf8()
+
+            println("rxDataFromClipboard = '$rxDataFromClipboard'")
+
+            notifier.showNotification(rxDataFromClipboard)
+
+            clipboardHandler.setData(rxDataFromClipboard)
+        }
+    }
+
     private fun receiveProgressRx() {
         val rxProgress = readStringUtf8()
         receptionProgressValue = rxProgress.toFloat()
@@ -455,8 +563,60 @@ class DataTransceiver(
         }
     }
 
-    private fun receiveTestMessage() {
+    private fun receivePairCreationRequest() {
         println("receive test message, txState = $txState, rxState = $rxState")
+
+        val transmitterName = readStringUtf8()
+
+        if (rxState == DataTransferState.IDLE) {
+            rxState = DataTransferState.READY_TO_RECEIVE
+            notifier.showAlertDialog(
+                message = "Do you want to create pair with '$transmitterName'?",
+                dismissCallback = {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        sendPairCreationDismiss()
+                    }
+                    notifier.closeConnection()
+                },
+                confirmCallback = {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        rxState = DataTransferState.READY_TO_RECEIVE
+                        // clipboardHandler.enable()
+                        notifier.showNotificationDialog("Pair connection is done") {
+                            println("you want do destroy pair")
+                        }
+                        sendPairCreationAccept()
+                    }
+                }
+            )
+        }
+    }
+
+    private fun receiveAcceptPairCreation() {
+        println("receive accept pair creation, txState = $txState, rxState = $rxState")
+        if (txState == DataTransferState.READY_TO_TRANSMIT) {
+            txState = DataTransferState.ACTIVE
+            rxState = DataTransferState.READY_TO_RECEIVE
+            notifier.updateNotificationDialogTitle("Pair connection is done")
+            clipboardHandler.enable()
+        }
+    }
+
+    private fun receiveDismissPairCreation() {
+        println("receive dismiss pair creation, txState = $txState, rxState = $rxState")
+        if (txState == DataTransferState.READY_TO_TRANSMIT) {
+            txState = DataTransferState.ACTIVE
+//            CoroutineScope(Dispatchers.IO).launch {
+//                sendFiles()
+//            }
+        }
+    }
+
+    private fun receivePairConnectionClose() {
+        println("receive pair connection close, txState = $txState, rxState = $rxState")
+        if (rxState == DataTransferState.READY_TO_RECEIVE) {
+            notifier.closePairConnection()
+        }
     }
 
     fun transmissionFlow(txFiles: TxFilesDescriptor) {
@@ -464,6 +624,11 @@ class DataTransceiver(
         if (txFiles.isNotEmpty()) {
             initiateDataTransmission(txFiles)
         }
+    }
+
+    fun startPairCreation() {
+        println("startPairCreation()")
+        initiatePairCreation()
     }
 
     suspend fun startReceptionFlow() {

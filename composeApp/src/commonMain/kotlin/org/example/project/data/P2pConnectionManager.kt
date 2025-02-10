@@ -4,30 +4,40 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import org.example.project.ContextFactory
+import org.example.project.getClipboardHandler
 import org.example.project.utils.NotificationInterface
 import org.example.project.utils.TxFilesDescriptor
 import java.net.InetAddress
 
 class P2pConnectionManager(
     notifier: NotificationInterface,
-    saveFileDir: String
+    saveFileDir: String,
+    contextFactory: ContextFactory,
 ) {
     companion object {
         private const val CLIENT_CONNECTION_TIMEOUT_MS = 30000
     }
 
     private var transmissionIsActive = false
+    private var pairConnectionIsActive = false
     private var socketJob: Job? = null
     private var rxJob: Job? = null
     private var txJob: Job? = null
+    private var pairJob: Job? = null
 
-    private var dataTransceiver: DataTransceiver = DataTransceiver(notifier, saveFileDir)
-    // private var txFiles: TxFilesDescriptor = TxFilesDescriptor()
+    private var dataTransceiver: DataTransceiver =
+        DataTransceiver(notifier, saveFileDir, getClipboardHandler(contextFactory))
     private var clientServer: TcpP2pClientServer = TcpP2pClientServer()
 
     fun cancelDataTransmission() {
         println("start cancelDataTransmission(), txJob.isActive? = ${txJob?.isActive}")
         dataTransceiver.cancelDataTransmission()
+    }
+
+    fun destroyPairConnection() {
+        println("start destroyPairConnection()")
+        dataTransceiver.cancelPairConnection()
     }
 
     suspend fun createServer(port: Int) {
@@ -100,6 +110,20 @@ class P2pConnectionManager(
         println("txJob.isActive = ${txJob?.isActive}")
     }
 
+    fun createPair() {
+        if (pairConnectionIsActive) {
+            println("createPair(), pair is already created")
+            return
+        }
+
+        pairJob = CoroutineScope(Dispatchers.IO).launch {
+            pairConnectionIsActive = true
+            dataTransceiver.startPairCreation()
+        }
+
+        println("txJob.isActive = ${txJob?.isActive}")
+    }
+
     fun setTransmitterName(name: String) {
         dataTransceiver.setTransmitterName(name)
     }
@@ -112,11 +136,16 @@ class P2pConnectionManager(
         return isJobActive(txJob) || transmissionIsActive
     }
 
+    fun isPairConnection() : Boolean {
+        return pairConnectionIsActive
+    }
+
     private fun isJobActive(job: Job?) : Boolean {
         return (job != null) && job.isActive
     }
 
     private fun stopActiveJobs() {
+        println("stopActiveJobs(), start")
         if (isJobActive(socketJob)) {
             socketJob?.cancel()
             println("stopActiveJobs, stop socketJob")
@@ -130,5 +159,6 @@ class P2pConnectionManager(
             println("stopActiveJobs, stop rxJob")
         }
         transmissionIsActive = false
+        pairConnectionIsActive = false
     }
 }

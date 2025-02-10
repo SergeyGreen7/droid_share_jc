@@ -6,11 +6,15 @@ import androidx.compose.ui.window.application
 import org.example.project.ui.GetMainView
 
 val fileShareBlock = FileShareBlockDesktop(
+    ContextFactory(),
     "C:/Users/Sergey/Downloads/fs_test/")
+
 
 fun main() = application {
 
     fileShareBlock.init()
+
+
 
     Window(
         onCloseRequest = {
@@ -21,6 +25,7 @@ fun main() = application {
     ) {
         DesktopApp()
     }
+
 }
 
 @Composable
@@ -29,6 +34,7 @@ fun DesktopApp() {
         fileShareBlock.enableBleServiceCallback,
         fileShareBlock.enableBleScannerCallback,
         fileShareBlock.sendDataCallback,
+        fileShareBlock.createPairCallback,
         fileShareBlock.setDeviceInfoCommon,
         fileShareBlock.getFileDescriptorFromPicker,
         fileShareBlock.registerMcDnsServiceDebug,

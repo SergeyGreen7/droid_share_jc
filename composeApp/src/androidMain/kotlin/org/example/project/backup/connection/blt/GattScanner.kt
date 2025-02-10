@@ -8,7 +8,6 @@ import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.os.ParcelUuid
 import android.util.Log
-//import org.example.project.NotificationInterface
 import org.example.project.DeviceInfoAndroid
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,12 +16,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.example.project.connection.GattServer.Companion.DEFAULT_UUID
-import org.example.project.utils.NotificationInterface
+import org.example.project.data.DeviceInfoCommon
 import java.util.UUID
 
 class GattScanner (
     private val scanner: BluetoothLeScanner,
-    private var notifier : NotificationInterface
 ) {
 
     companion object {
@@ -32,6 +30,8 @@ class GattScanner (
         private val LIST_UPDATE_TIME = 5000L
         private val NUM_SCAN_PERIODS = 1000
     }
+
+    var onDeviceListUpdate = { _: List<DeviceInfoCommon> -> Unit}
 
     private var isActive = false
     private var serviceUuid = DEFAULT_UUID
@@ -104,10 +104,10 @@ class GattScanner (
                 delay(BLE_SCAN_PERIOD_SINGLE)
                 stopScan()
             }
-            CoroutineScope(Dispatchers.IO).launch {
-                notifier.showNotification("BLE services discovery started. " +
-                        "Please wait for ${BLE_SCAN_PERIOD_SINGLE/1000} seconds ")
-            }
+//            CoroutineScope(Dispatchers.IO).launch {
+//                notifier.showNotification("BLE services discovery started. " +
+//                        "Please wait for ${BLE_SCAN_PERIOD_SINGLE/1000} seconds ")
+//            }
         }
     }
 
@@ -129,8 +129,8 @@ class GattScanner (
                         "devices.size = ${devices.size}, cntr = $cntr")
                     if (cntr++ % 5 == 0) {
                         withContext(Dispatchers.Main) {
-                            Log.d(TAG, "startScanPeriodic, run notifier.onDeviceListUpdate()")
-                            notifier.onDeviceListUpdate(devices.map{ DeviceInfoAndroid(it.value).toCommon() })
+                            Log.d(TAG, "startScanPeriodic, run onDeviceListUpdate()")
+                            onDeviceListUpdate(devices.map{ DeviceInfoAndroid(it.value).toCommon() })
                             devices.clear()
                         }
                     }
@@ -171,7 +171,7 @@ class GattScanner (
 
     private fun showDiscoveredDevices() {
         CoroutineScope(Dispatchers.Main).launch {
-            notifier.onDeviceListUpdate(devices.map{ DeviceInfoAndroid(it.value).toCommon() })
+            onDeviceListUpdate(devices.map{ DeviceInfoAndroid(it.value).toCommon() })
         }
     }
 

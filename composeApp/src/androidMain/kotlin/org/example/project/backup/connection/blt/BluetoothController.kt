@@ -19,8 +19,6 @@ import android.os.IBinder
 import android.os.ParcelUuid
 import android.os.Parcelable
 import android.util.Log
-//import org.example.project.NotificationInterface
-import org.example.project.DeviceInfoAndroid
 import kotlinx.coroutines.delay
 import org.example.project.utils.NotificationInterface
 import java.util.UUID
@@ -28,8 +26,8 @@ import java.util.UUID
 
 @SuppressLint("MissingPermission")
 class BluetoothController(
-    private val context: Context,
-    private val manager : BluetoothManager,
+    context: Context,
+    manager : BluetoothManager,
     private val notifier: NotificationInterface
 )
 {
@@ -95,7 +93,8 @@ class BluetoothController(
             }
         }
 
-        gattScanner = GattScanner(adapter.bluetoothLeScanner, notifier)
+        // gattScanner = GattScanner(adapter.bluetoothLeScanner, notifier)
+        gattScanner = GattScanner(adapter.bluetoothLeScanner)
         gattServer = GattServer(context, manager)
     }
 

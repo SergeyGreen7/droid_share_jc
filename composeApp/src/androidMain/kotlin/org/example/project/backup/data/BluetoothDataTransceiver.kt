@@ -23,7 +23,7 @@ class BluetoothDataTransceiver(
     private var rxJob: Job? = null
     private var txJob: Job? = null
 
-    private var dataTransceiver: DataTransceiver? = null
+    private lateinit var dataTransceiver: DataTransceiver
     private var txFilePack: TxFilesDescriptor? = null
 
     companion object {
@@ -35,7 +35,7 @@ class BluetoothDataTransceiver(
     var bluetoothController: BluetoothController? = null
 
     init {
-        dataTransceiver = DataTransceiver(notifier, "")
+        // dataTransceiver = DataTransceiver(notifier, "", )
         bltClientServer = BluetoothClientServer()
     }
 

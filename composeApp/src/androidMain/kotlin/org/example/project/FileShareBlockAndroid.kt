@@ -4,49 +4,30 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.bluetooth.BluetoothManager
 import android.content.Context
-import android.content.Context.NSD_SERVICE
 import android.content.Intent
 import android.database.Cursor
 import android.net.Uri
-import android.net.nsd.NsdManager
-import android.net.wifi.WifiManager
 import android.provider.OpenableColumns
 import android.util.Log
 
 import io.github.vinceglb.filekit.core.PlatformFiles
 
 import org.example.project.connection.BluetoothController
-import org.example.project.connection.GattClient
-import org.example.project.connection.GattScanner
-import org.example.project.connection.GattServer
-import org.example.project.connection.LnsService
-import org.example.project.data.DeviceInfoCommon
 import org.example.project.utils.TxFileDescriptor
 import org.example.project.fragments.FileShareBlockCommon
 import org.example.project.ui.*
 import java.io.InputStream
-import java.util.UUID
 
 class FileShareBlockAndroid (
-    private val context: Context,
-    private val activity: Activity,
+    private val contextFactory: ContextFactory,
     saveFileDir: String,
 ) : FileShareBlockCommon(
-    saveFileDir
+    contextFactory, saveFileDir
 ) {
 
     companion object {
         private const val TAG = "FileShareFragment"
     }
-
-    private lateinit var gattClient: GattClient
-    private lateinit var gattServer: GattServer
-    private lateinit var gattScanner: GattScanner
-
-    private lateinit var lnsService: LnsService
-
-    private var bluetoothManager: BluetoothManager =
-        activity.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
 
     lateinit var bluetoothController: BluetoothController
 
@@ -66,120 +47,18 @@ class FileShareBlockAndroid (
         +"\nPRODUCT: "+android.os.Build.PRODUCT)
         Log.d(TAG, "$sb")
 
-        bluetoothController = BluetoothController(context, bluetoothManager, notifier)
-
-        val nsdManager = activity.getSystemService(NSD_SERVICE) as NsdManager
-        lnsService = LnsService(nsdManager)
-
-        val name = bluetoothManager.adapter.name
-        nameStr.value = "Your name: $name"
-        connectionManager.setTransmitterName(name)
+        val bluetoothManager = (contextFactory.getActivity() as Activity)
+            .getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        bluetoothController = BluetoothController(contextFactory.getContext() as Context, bluetoothManager, notifier)
     }
 
-    override fun config() {
-
-        val bluetoothManager = activity.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        gattScanner = GattScanner(bluetoothManager.adapter.bluetoothLeScanner, this.notifier)
-        gattServer = GattServer(context, bluetoothManager)
-        gattClient = GattClient(context)
-
-        val wifi = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        val multicastLock = wifi.createMulticastLock("multicastLock")
-        multicastLock.setReferenceCounted(true)
-        multicastLock.acquire()
-    }
-
-    override val setDeviceInfoCommon = { device: DeviceInfoCommon, index: Int ->
-        Log.d(TAG,"setDeviceInfo(), selectedDeviceInfoCommon = $device, index = $index")
-        selectedDeviceInfo = gattScanner.getDevice(index)
-        selectedDeviceIndex = index
-    }
-
-    override fun configBleService(
-        serviceUuid: UUID,
-        characteristicUuid: UUID,
-        createServerCommand: String,
-        destroyServerCommand: String,
-        createServerCallback: (name: String) -> Unit,
-        destroyServerCallback: () -> Unit,
-    ) {
-        gattServer.setServiceUuid(serviceUuid)
-        gattServer.setCharacteristicUuid(characteristicUuid)
-        gattServer.createServerCommand = createServerCommand
-        gattServer.destroyServerCommand = destroyServerCommand
-        gattServer.createServerCallback = createServerCallback
-        gattServer.destroyServerCallback = destroyServerCallback
-    }
-
-    override fun startBleService() {
-        gattServer.startBleService()
-    }
-
-    override fun stopBleService() {
-        gattServer.stopBleService()
-    }
-
-    override fun configBleScanner(serviceUuid: UUID) {
-        gattScanner.setServiceUuid(serviceUuid)
-    }
-
-    override fun startBleScanner() {
-        gattScanner.startScanPeriodic()
-    }
-
-    override fun stopBleScanner() {
-        gattScanner.stopScan()
-    }
-
-    override fun configBleClient(
-        serviceUuid: UUID,
-        characteristicUuid: UUID,
-        callback: (flag: Boolean) -> Unit
-    ) {
-        gattClient.setServiceUuid(serviceUuid)
-        gattClient.setCharacteristicUuid(characteristicUuid)
-        gattClient.callbackOnDataSend = callback
-
-    }
-
-    override fun setBleClientDataToSend(data: String) {
-        gattClient.dataToSend = data
-    }
-
-    override fun disconnectBleClient() {
-        gattClient.disconnect()
-    }
-
-    override fun setMcDnsServiceName(name: String) {
-        lnsService.serviceName = name
-    }
-
-    override fun registerMcDnsService() {
-        lnsService.registerService()
-    }
-
-    override fun unregisterMcDnsService() {
-        lnsService.unregisterService()
-    }
-
-    fun resolveNewIntent(intent: Intent) {
+        fun resolveNewIntent(intent: Intent) {
         println("start resolveNewIntent, intent = $intent")
         if (intent.action !in listOf(Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE)){
             return
         }
         println("run geFilePacketDescriptorFromIntent()")
         geFilePacketDescriptorFromIntent(intent)
-        gattScanner.startScanPeriodic()
-    }
-
-    override fun connectBleClient(info: DeviceInfoCommon) {
-        val deviceInfoAndroid = info as DeviceInfoAndroid
-        Log.d(TAG, "deviceInfoAndroid = $deviceInfoAndroid")
-        gattClient.connect((info).bleScanResult!!)
-    }
-
-    override fun sendMessageBleClient(message: String) {
-        gattClient.sendMessage(message)
     }
 
     private fun geFilePacketDescriptorFromIntent(intent: Intent) {
@@ -237,7 +116,7 @@ class FileShareBlockAndroid (
 
     @SuppressLint("Range")
     private fun addFileDescriptor(uri: Uri) {
-        val cursor = context.contentResolver?.
+        val cursor = (contextFactory.getContext() as Context).contentResolver?.
         query(uri, null, null, null, null) as Cursor
         cursor.moveToFirst()
         val fileName = cursor.getString(
@@ -245,7 +124,8 @@ class FileShareBlockAndroid (
         val fileSize = cursor.getString(
             cursor.getColumnIndex(OpenableColumns.SIZE))?.toInt() as Int
         cursor.close()
-        val inputStream = context.contentResolver?.openInputStream(uri) as InputStream
+        val inputStream = (contextFactory.getContext() as Context)
+            .contentResolver?.openInputStream(uri) as InputStream
 
         println("fileName = $fileName")
         println("fileSize = $fileSize")

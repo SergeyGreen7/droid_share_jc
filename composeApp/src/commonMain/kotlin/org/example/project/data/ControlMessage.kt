@@ -27,9 +27,15 @@ open class ControlMessage(
             }
             MessageType.ACCEPT_TX -> {}
             MessageType.DISMISS_TX -> {}
-            MessageType.TEST_MESSAGE -> {}
+            MessageType.PAIR_CREATION_REQUEST -> {
+                bytes += stringUtf8ToByteArray(txName)
+            }
             MessageType.FILE_COMMON_DSCR -> {}
             MessageType.FILE -> {}
+            MessageType.CLIPBOARD_CONTENT -> {}
+            MessageType.ACCEPT_PAIR_CREATION_REQUEST -> {}
+            MessageType.DISMISS_PAIR_CREATION_REQUEST -> {}
+            MessageType.PAIR_CONNECTION_CLOSE -> {}
         }
 
 //        println("serialize, bytes:")
@@ -53,9 +59,13 @@ open class ControlMessage(
             }
             MessageType.ACCEPT_TX -> 0
             MessageType.DISMISS_TX -> 0
-            MessageType.TEST_MESSAGE -> 0
+            MessageType.PAIR_CREATION_REQUEST -> 0
             MessageType.FILE_COMMON_DSCR -> 0
             MessageType.FILE -> 0
+            MessageType.CLIPBOARD_CONTENT -> 0
+            MessageType.ACCEPT_PAIR_CREATION_REQUEST -> 0
+            MessageType.DISMISS_PAIR_CREATION_REQUEST -> 0
+            MessageType.PAIR_CONNECTION_CLOSE -> 0
         }
     }
 
@@ -86,5 +96,13 @@ class RxProgressMessage(
 ) : ControlMessage(MessageType.PROGRESS_RX) {
     init {
         progressStr = progress
+    }
+}
+
+class PairCreationRequestMessage(
+    name: String
+) : ControlMessage(MessageType.PAIR_CREATION_REQUEST) {
+    init {
+        txName = name
     }
 }

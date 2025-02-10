@@ -1,6 +1,19 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.FileInputStream
+import java.io.InputStreamReader
+import java.nio.charset.StandardCharsets
+import java.util.Properties
+
+val keystorePropertiesFile = rootProject.file("signing/keystore.properties")
+val keystoreProperties = Properties()
+keystoreProperties.load(
+    InputStreamReader(
+        FileInputStream(keystorePropertiesFile),
+        StandardCharsets.UTF_8
+    )
+)
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -72,11 +85,27 @@ android {
             excludes += "META-INF/*"
         }
     }
+
+    signingConfigs {
+        create("androiddefault") {
+            storeFile = file(keystoreProperties["storeFile.androiddefault"] as String)
+            storePassword = keystoreProperties["storePassword.androiddefault"] as String
+            keyAlias = keystoreProperties["keyAlias.androiddefault"] as String
+            keyPassword = keystoreProperties["keyPassword.androiddefault"] as String
+        }
+    }
+
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("androiddefault")
+        }
+        getByName("debug") {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("androiddefault")
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -98,6 +127,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.adaptive.android)
     implementation(libs.androidx.core)
+    implementation(libs.androidx.startup.runtime)
     // implementation(libs.androidx.material3.adaptive.android)
     debugImplementation(compose.uiTooling)
     coreLibraryDesugaring(libs.desugar.jdk.libs)

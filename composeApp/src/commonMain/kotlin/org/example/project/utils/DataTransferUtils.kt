@@ -3,6 +3,7 @@ package org.example.project.utils
 enum class MessageType {
     FILE_COMMON_DSCR,
     FILE,
+    CLIPBOARD_CONTENT,
     CANCEL_TX,
     CANCEL_RX,
     PROGRESS_RX,
@@ -10,13 +11,18 @@ enum class MessageType {
     TX_REQUEST,
     ACCEPT_TX,
     DISMISS_TX,
-    TEST_MESSAGE
+    PAIR_CREATION_REQUEST,
+    ACCEPT_PAIR_CREATION_REQUEST,
+    DISMISS_PAIR_CREATION_REQUEST,
+    PAIR_CONNECTION_CLOSE,
 }
 
 fun isMessageControl(type: MessageType): Boolean {
     return when(type) {
         MessageType.FILE_COMMON_DSCR,
-        MessageType.FILE -> {
+        MessageType.FILE,
+        MessageType.CLIPBOARD_CONTENT,
+            -> {
             false
         }
         MessageType.CANCEL_TX,
@@ -25,8 +31,12 @@ fun isMessageControl(type: MessageType): Boolean {
         MessageType.TX_REQUEST,
         MessageType.ACCEPT_TX,
         MessageType.DISMISS_TX,
-        MessageType.TEST_MESSAGE,
-        MessageType.PROGRESS_RX, -> {
+        MessageType.PAIR_CREATION_REQUEST,
+        MessageType.PROGRESS_RX,
+        MessageType.ACCEPT_PAIR_CREATION_REQUEST,
+        MessageType.DISMISS_PAIR_CREATION_REQUEST,
+        MessageType.PAIR_CONNECTION_CLOSE,
+            -> {
             true
         }
     }

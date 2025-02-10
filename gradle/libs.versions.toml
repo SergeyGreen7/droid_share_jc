@@ -6,6 +6,7 @@ blessed = "0.64"
 compose-multiplatform = "1.7.0"
 dbusJavaTransportNativeUnixsocket = "4.3.2"
 filekitCompose = "0.8.8"
+jmdns = "3.0.0"
 junit = "4.13.2"
 desugar_jdk_libs_minimal = "2.1.4"
 dnsSdKt = "1.0.4"
@@ -15,6 +16,7 @@ foundationLayoutAndroid = "1.7.6"
 material3Android = "1.3.1"
 log4jSlf4j2Impl = "2.20.0"
 logbackClassic = "1.5.16"
+startupRuntime = "1.2.0"
 uiGraphicsAndroid = "1.7.6"
 composeMaterial = "1.4.0"
 firebaseInappmessagingKtx = "21.0.1"
@@ -26,7 +28,9 @@ core = "1.13.0"
 
 [libraries]
 androidx-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3Android" }
+androidx-startup-runtime = { module = "androidx.startup:startup-runtime", version.ref = "startupRuntime" }
 filekit-compose = { module = "io.github.vinceglb:filekit-compose", version.ref = "filekitCompose" }
+jmdns = { module = "javax.jmdns:jmdns", version.ref = "jmdns" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

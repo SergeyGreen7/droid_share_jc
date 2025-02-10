@@ -3,20 +3,18 @@ package org.example.project.connection
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.util.Log
-//import org.example.project.NotificationInterface
-import org.example.project.utils.NotificationInterface
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean
 
 class LnsScanner (
-    private val manager: NsdManager,
-    private val notifier: NotificationInterface
+    private val manager: NsdManager
 )
 {
     companion object {
         private const val TAG = "LnsScanner"
     }
+
+    var serviceType = ""
 
     private var isActive = false
     private var referenceServiceName = ""
@@ -50,10 +48,6 @@ class LnsScanner (
             if (serviceInfo != null) {
                 Log.d(TAG, "serviceInfo: $serviceInfo")
             }
-            val executor = Executor() {
-                Log.d(TAG, "Hello from executor!")
-            }
-
             Log.d(TAG, "discoverServices(), serviceInfo!!.serviceName = ${serviceInfo!!.serviceName}")
 
             if (resolveListenerBusy.compareAndSet(false, true)) {
@@ -135,7 +129,19 @@ class LnsScanner (
         showDiscoveredDevices()
 
         Log.d(TAG, "LnsScanner, startScan()")
-        manager.discoverServices(LnsService.SERVICE_TYPE, LnsService.NSD_PROTOCOL, discoveryListener)
+        if (serviceType.isEmpty()) {
+            manager.discoverServices(
+                LnsService.SERVICE_TYPE,
+                LnsService.NSD_PROTOCOL,
+                discoveryListener
+            )
+        } else {
+            manager.discoverServices(
+                serviceType,
+                LnsService.NSD_PROTOCOL,
+                discoveryListener
+            )
+        }
     }
 
     fun stopScan() {

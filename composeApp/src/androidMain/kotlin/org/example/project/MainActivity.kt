@@ -5,7 +5,6 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
-import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
@@ -17,7 +16,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import org.example.project.fragments.FileSharingRole
 import org.example.project.ui.GetMainView
 
 
@@ -25,8 +23,6 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
-//        private const val CHANNEL_ID = "notification_channel_1"
-//        private const val notificationId = 111
     }
 
     private lateinit var fileShareBlock: FileShareBlockAndroid
@@ -38,7 +34,7 @@ class MainActivity : ComponentActivity() {
 
         requestForPermissions()
 
-        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val bluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
         if (!bluetoothManager.adapter.isEnabled) {
             val intent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
             btEnableLauncher.launch(intent)
@@ -47,31 +43,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-//    private fun createFgServiceChannel(context: Context) {
-//        val channel =
-//            NotificationChannel("channel_id", "Channel Name", NotificationManager.IMPORTANCE_MIN)
-//        val mNotificationManager =
-//            context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-//        mNotificationManager.createNotificationChannel(channel)
-//    }
-
-//    fun getServiceNotification(context: Context): Notification {
-//        val mBuilder = NotificationCompat.Builder(context, "channel_id")
-//        mBuilder.setContentTitle("One line text")
-//        // mBuilder.setSmallIcon(R.drawable.ic_notification)
-//        mBuilder.setProgress(0, 0, true)
-//        mBuilder.setOngoing(true)
-//        return mBuilder.build()
-//    }
-
     @SuppressLint("MissingPermission")
     private fun initApp() {
 
         // getServiceNotification(this)
 
         fileShareBlock = FileShareBlockAndroid(
-            this,
-            this,
+            ContextFactory(this),
             Environment.getExternalStorageDirectory().toString() + "/Download/",
         )
         fileShareBlock.init()
@@ -86,6 +64,7 @@ class MainActivity : ComponentActivity() {
                 fileShareBlock.enableBleServiceCallback,
                 fileShareBlock.enableBleScannerCallback,
                 fileShareBlock.sendDataCallback,
+                fileShareBlock.createPairCallback,
                 fileShareBlock.setDeviceInfoCommon,
                 fileShareBlock.getFileDescriptorFromPicker,
                 fileShareBlock.registerMcDnsServiceDebug,
@@ -100,7 +79,6 @@ class MainActivity : ComponentActivity() {
             startIntentResolved = true
         }
 
-        // createNotification()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -116,6 +94,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         fileShareBlock.stopAndDestroy()
+
     }
 
     @RequiresApi(Build.VERSION_CODES.S)
