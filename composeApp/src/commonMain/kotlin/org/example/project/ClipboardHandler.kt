@@ -30,6 +30,4 @@ abstract class ClipboardHandler {
     protected abstract fun putDataIntoClipboard(data: String)
 }
 
-expect fun getClipboardHandler(
-    contextFactory: ContextFactory
-): ClipboardHandler
+expect fun getClipboardHandler(): ClipboardHandler

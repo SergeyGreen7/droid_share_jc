@@ -5,7 +5,6 @@ import io.github.vinceglb.filekit.core.PlatformFiles
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.example.project.ContextFactory
 import org.example.project.connection.BleManager
 import org.example.project.connection.LocalNetworkServiceManager
 import org.example.project.connection.getBleManager
@@ -37,7 +36,6 @@ import java.util.UUID
 
 
 abstract class FileShareBlockCommon (
-    private val contextFactory: ContextFactory,
     private val saveFileDir: String,
 ) {
 
@@ -148,7 +146,7 @@ abstract class FileShareBlockCommon (
     }
 
     fun init() {
-        bleManager = getBleManager(contextFactory)
+        bleManager = getBleManager()
         onCreate()
         bleManager.startBleService()
         bleManager.startBleScanner()
@@ -195,7 +193,7 @@ abstract class FileShareBlockCommon (
     protected open fun onCreate() {
         println("FileShareFragment, start onCreate()")
 
-        connectionManager = P2pConnectionManager(notifier, saveFileDir, contextFactory)
+        connectionManager = P2pConnectionManager(notifier, saveFileDir)
         lnsManager = LocalNetworkServiceManager("local")
 
         // Configure BLE client

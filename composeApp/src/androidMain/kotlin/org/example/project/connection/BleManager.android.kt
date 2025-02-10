@@ -1,18 +1,14 @@
 package org.example.project.connection
 
 import android.annotation.SuppressLint
-import android.app.Activity
-import android.bluetooth.BluetoothManager
-import android.content.Context
-import android.net.wifi.WifiManager
-import org.example.project.ContextFactory
+import org.example.project.appContext
+import org.example.project.bluetoothManager
 import org.example.project.data.DeviceInfoCommon
+import org.example.project.wifiManager
 import java.util.UUID
 
 @SuppressLint("MissingPermission")
-class AndroidBleManager(
-    contextFactory: ContextFactory
-) : BleManager {
+class AndroidBleManager : BleManager {
 
     private var gattClient: GattClient
     private var gattServer: GattServer
@@ -20,14 +16,13 @@ class AndroidBleManager(
     private var name = ""
 
     init {
-        val bluetoothManager = (contextFactory.getActivity() as Activity)
-            .getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+//        val bluetoothManager = (contextFactory.getActivity() as Activity)
+//            .getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         gattScanner = GattScanner(bluetoothManager.adapter.bluetoothLeScanner)
-        gattServer = GattServer(contextFactory.getContext() as Context, bluetoothManager)
-        gattClient = GattClient(contextFactory.getContext() as Context)
+        gattServer = GattServer(appContext, bluetoothManager)
+        gattClient = GattClient(appContext)
 
-        val wifi = (contextFactory.getContext() as Context).getSystemService(Context.WIFI_SERVICE) as WifiManager
-        val multicastLock = wifi.createMulticastLock("multicastLock")
+        val multicastLock = wifiManager.createMulticastLock("multicastLock")
         multicastLock.setReferenceCounted(true)
         multicastLock.acquire()
 
@@ -108,6 +103,4 @@ class AndroidBleManager(
 
 }
 
-actual fun getBleManager(
-    contextFactory: ContextFactory
-): BleManager = AndroidBleManager(contextFactory)
+actual fun getBleManager(): BleManager = AndroidBleManager()

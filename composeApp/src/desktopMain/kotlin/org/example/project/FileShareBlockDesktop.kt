@@ -9,10 +9,9 @@ import java.nio.file.Files
 import kotlin.io.path.Path
 
 class FileShareBlockDesktop (
-    contextFactory: ContextFactory,
     saveFileDir: String,
 ) : FileShareBlockCommon(
-    contextFactory, saveFileDir
+    saveFileDir
 ) {
 
     // private var mcDnsService = McDnsService("desktop-")

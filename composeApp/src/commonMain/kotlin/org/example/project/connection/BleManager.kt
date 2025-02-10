@@ -1,6 +1,5 @@
 package org.example.project.connection
 
-import org.example.project.ContextFactory
 import org.example.project.data.DeviceInfoCommon
 import java.util.UUID
 
@@ -33,8 +32,6 @@ interface BleManager {
     fun disconnectBleClient()
 }
 
-expect fun getBleManager(
-    contextFactory: ContextFactory
-): BleManager
+expect fun getBleManager(): BleManager
 
 

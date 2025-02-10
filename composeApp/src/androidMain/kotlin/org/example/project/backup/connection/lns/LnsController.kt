@@ -3,19 +3,16 @@ package org.example.project.connection
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.util.Log
-import org.example.project.utils.NotificationInterface
 
 class LnsController (
-    manager: NsdManager,
-    notifier: NotificationInterface
-)
-{
+    manager: NsdManager
+){
     companion object {
         private const val TAG = "NsdController"
     }
 
     private val service = LnsService(manager)
-    private val scanner = LnsScanner(manager, notifier)
+    private val scanner = LnsScanner(manager)
 
     fun getServiceInfo(): NsdServiceInfo {
         return service.serviceInfo

@@ -1,9 +1,6 @@
 package org.example.project
 
 import android.annotation.SuppressLint
-import android.app.Activity
-import android.bluetooth.BluetoothManager
-import android.content.Context
 import android.content.Intent
 import android.database.Cursor
 import android.net.Uri
@@ -19,10 +16,9 @@ import org.example.project.ui.*
 import java.io.InputStream
 
 class FileShareBlockAndroid (
-    private val contextFactory: ContextFactory,
     saveFileDir: String,
 ) : FileShareBlockCommon(
-    contextFactory, saveFileDir
+    saveFileDir
 ) {
 
     companion object {
@@ -47,9 +43,9 @@ class FileShareBlockAndroid (
         +"\nPRODUCT: "+android.os.Build.PRODUCT)
         Log.d(TAG, "$sb")
 
-        val bluetoothManager = (contextFactory.getActivity() as Activity)
-            .getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        bluetoothController = BluetoothController(contextFactory.getContext() as Context, bluetoothManager, notifier)
+//        val bluetoothManager = (contextFactory.getActivity() as Activity)
+//            .getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        bluetoothController = BluetoothController(appContext, bluetoothManager, notifier)
     }
 
         fun resolveNewIntent(intent: Intent) {
@@ -116,7 +112,7 @@ class FileShareBlockAndroid (
 
     @SuppressLint("Range")
     private fun addFileDescriptor(uri: Uri) {
-        val cursor = (contextFactory.getContext() as Context).contentResolver?.
+        val cursor = appContext.contentResolver?.
         query(uri, null, null, null, null) as Cursor
         cursor.moveToFirst()
         val fileName = cursor.getString(
@@ -124,8 +120,7 @@ class FileShareBlockAndroid (
         val fileSize = cursor.getString(
             cursor.getColumnIndex(OpenableColumns.SIZE))?.toInt() as Int
         cursor.close()
-        val inputStream = (contextFactory.getContext() as Context)
-            .contentResolver?.openInputStream(uri) as InputStream
+        val inputStream = appContext.contentResolver?.openInputStream(uri) as InputStream
 
         println("fileName = $fileName")
         println("fileSize = $fileSize")

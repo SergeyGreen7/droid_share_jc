@@ -4,7 +4,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import org.example.project.ContextFactory
 import org.example.project.getClipboardHandler
 import org.example.project.utils.NotificationInterface
 import org.example.project.utils.TxFilesDescriptor
@@ -13,7 +12,6 @@ import java.net.InetAddress
 class P2pConnectionManager(
     notifier: NotificationInterface,
     saveFileDir: String,
-    contextFactory: ContextFactory,
 ) {
     companion object {
         private const val CLIENT_CONNECTION_TIMEOUT_MS = 30000
@@ -27,7 +25,7 @@ class P2pConnectionManager(
     private var pairJob: Job? = null
 
     private var dataTransceiver: DataTransceiver =
-        DataTransceiver(notifier, saveFileDir, getClipboardHandler(contextFactory))
+        DataTransceiver(notifier, saveFileDir, getClipboardHandler())
     private var clientServer: TcpP2pClientServer = TcpP2pClientServer()
 
     fun cancelDataTransmission() {

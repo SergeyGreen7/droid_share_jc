@@ -1,7 +1,6 @@
 package org.example.project.connection
 
 import WinBleNativeApi
-import org.example.project.ContextFactory
 import org.example.project.data.DeviceInfoCommon
 import java.util.UUID
 
@@ -97,6 +96,4 @@ class DesktopBleManager : BleManager {
 
 }
 
-actual fun getBleManager(
-    contextFactory: ContextFactory
-): BleManager = DesktopBleManager()
+actual fun getBleManager(): BleManager = DesktopBleManager()

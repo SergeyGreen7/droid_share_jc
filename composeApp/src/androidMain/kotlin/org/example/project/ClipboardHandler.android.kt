@@ -1,22 +1,17 @@
 package org.example.project
 
 import android.annotation.SuppressLint
-import android.app.Application
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context.CLIPBOARD_SERVICE
 
 @SuppressLint("ServiceCast")
-class AndroidClipboardHandler(contextFactory: ContextFactory): ClipboardHandler() {
-    private var clipboardManager : ClipboardManager
+class AndroidClipboardHandler: ClipboardHandler() {
+    private var clipboardManager : ClipboardManager = appContext
+        .getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
 
     private var clipboardContentMonitor = {
         newTextEvent()
-    }
-
-    init {
-        clipboardManager = (contextFactory.getApplication() as Application)
-            .getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
     }
 
     override fun enable() {
@@ -43,6 +38,4 @@ class AndroidClipboardHandler(contextFactory: ContextFactory): ClipboardHandler(
 
 }
 
-actual fun getClipboardHandler(
-    contextFactory: ContextFactory
-): ClipboardHandler = AndroidClipboardHandler(contextFactory)
+actual fun getClipboardHandler(): ClipboardHandler = AndroidClipboardHandler()

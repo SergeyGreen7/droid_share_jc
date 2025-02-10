@@ -32,6 +32,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        AppContextInitializer().create(this)
+
         requestForPermissions()
 
         val bluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
@@ -49,7 +51,6 @@ class MainActivity : ComponentActivity() {
         // getServiceNotification(this)
 
         fileShareBlock = FileShareBlockAndroid(
-            ContextFactory(this),
             Environment.getExternalStorageDirectory().toString() + "/Download/",
         )
         fileShareBlock.init()

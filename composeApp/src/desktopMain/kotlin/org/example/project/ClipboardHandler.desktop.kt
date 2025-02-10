@@ -50,6 +50,4 @@ class DesktopClipboardHandler : ClipboardHandler() {
 
 }
 
-actual fun getClipboardHandler(
-    contextFactory: ContextFactory
-): ClipboardHandler = DesktopClipboardHandler()
+actual fun getClipboardHandler(): ClipboardHandler = DesktopClipboardHandler()

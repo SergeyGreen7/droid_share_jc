@@ -6,9 +6,7 @@ import androidx.compose.ui.window.application
 import org.example.project.ui.GetMainView
 
 val fileShareBlock = FileShareBlockDesktop(
-    ContextFactory(),
     "C:/Users/Sergey/Downloads/fs_test/")
-
 
 fun main() = application {
 
