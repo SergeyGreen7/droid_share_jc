@@ -118,35 +118,14 @@ class GattClient(
                     }
                 }
             }
-
-//            for (s in gatt.getServices()) {
-//                Log.i(TAG, "Service: $s")
-//                    for (c in s.characteristics) {
-//                    Log.i(TAG, "    Characteristic: $c")
-//                    if (hasPermission(c, PERMISSION_READ)) {
-//                        gattCharacteristics.add(c)
-//                    }
-//                }
-//            }
-
-            // tmp
-//            if (gattCharacteristics.isNotEmpty()) {
-//                gatt.readCharacteristic(gattCharacteristics[0])
-//                gattCharacteristics.removeAt(0)
-//            }
         }
 
         override fun onCharacteristicRead(gatt: BluetoothGatt?,
                                           characteristic: BluetoothGattCharacteristic?,
                                           status: Int
         ) {
-            // onCharacteristicRead(gatt, characteristic, status)
             Log.d(TAG, "GattClient, onCharacteristicRead")
             Log.d(TAG, "characteristic: $characteristic")
-//            if (gattCharacteristics.isNotEmpty()) {
-//                gatt?.readCharacteristic(gattCharacteristics[0])
-//                gattCharacteristics.removeAt(0)
-//            }
         }
 
         @SuppressLint("MissingPermission")
@@ -266,9 +245,6 @@ class GattClient(
         Log.d(TAG, "GattClient, connect()")
         scanResultInternal = scanResult
         tryToConnect()
-//        gattClient = scanResultInternal?.device?.connectGatt(
-//            context, false, gattClientCallback, BluetoothDevice.TRANSPORT_LE)
-//        Log.d(TAG, "gatt: $gattClient")
     }
 
     @SuppressLint("MissingPermission")
@@ -307,10 +283,6 @@ class GattClient(
             return
         }
         sendMessage(targetGatt!!, message)
-    }
-
-    private fun hasPermission(c: BluetoothGattCharacteristic, permission: Int): Boolean {
-        return c.permissions and permission != 0
     }
 
     @SuppressLint("MissingPermission")
