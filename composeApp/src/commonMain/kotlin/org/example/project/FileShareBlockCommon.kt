@@ -155,6 +155,7 @@ abstract class FileShareBlockCommon (
     }
 
     fun stopAndDestroy() {
+        stopConnection()
         bleManager.stopBleScanner()
         bleManager.stopBleService()
         bleManager.disconnectBleClient()
@@ -306,7 +307,7 @@ abstract class FileShareBlockCommon (
         bleManager.stopBleScanner()
 
         notifier.showProgressDialog("Sending data") {
-            stopDataTransmission()
+            stopConnection()
         }
 
         lnsManager.callbackOnRefServiceFind = sendCallback
@@ -326,7 +327,7 @@ abstract class FileShareBlockCommon (
         bleManager.stopBleScanner()
 
         notifier.showNotificationDialog("Pair connection...") {
-            destroyPairConnection()
+            stopConnection()
         }
 
         lnsManager.callbackOnRefServiceFind = pairConnectionCallback
@@ -336,31 +337,44 @@ abstract class FileShareBlockCommon (
 
     }
 
-    private fun stopDataTransmission() {
-        println("start stopDataTransmission(), " +
-                "activeDataTransmission = ${connectionManager.isActiveTransmission()}")
+    private fun stopConnection() {
+        println("start stopConnection(), " +
+                "isActiveConnection = ${connectionManager.isActiveConnection()}")
 
-        if (connectionManager.isActiveTransmission()) {
-            connectionManager.cancelDataTransmission()
-        } else {
+        if (connectionManager.isActiveConnection()) {
+            connectionManager.cancelConnection()
+        } else if (bleManager.isBleClientConnected()) {
             bleManager.sendMessageBleClient("$DESTROY_SERVER_COMMAND@")
             notifier.closeConnection()
         }
         disableConnectionState()
     }
 
-    private fun destroyPairConnection() {
-        println("start stopDataTransmission(), " +
-                "activeDataTransmission = ${connectionManager.isActiveTransmission()}")
-
-        if (connectionManager.isPairConnection()) {
-            connectionManager.destroyPairConnection()
-        } else {
-            bleManager.sendMessageBleClient("$DESTROY_SERVER_COMMAND@")
-            notifier.closePairConnection()
-        }
-        disableConnectionState()
-    }
+//    private fun stopDataTransmission() {
+//        println("start stopDataTransmission(), " +
+//                "activeDataTransmission = ${connectionManager.isActiveTransmission()}")
+//
+//        if (connectionManager.isActiveTransmission()) {
+//            connectionManager.cancelDataTransmission()
+//        } else {
+//            bleManager.sendMessageBleClient("$DESTROY_SERVER_COMMAND@")
+//            notifier.closeConnection()
+//        }
+//        disableConnectionState()
+//    }
+//
+//    private fun destroyPairConnection() {
+//        println("start stopDataTransmission(), " +
+//                "activeDataTransmission = ${connectionManager.isActiveTransmission()}")
+//
+//        if (connectionManager.isPairConnection()) {
+//            connectionManager.destroyPairConnection()
+//        } else {
+//            bleManager.sendMessageBleClient("$DESTROY_SERVER_COMMAND@")
+//            notifier.closePairConnection()
+//        }
+//        disableConnectionState()
+//    }
 
     protected fun disableConnectionState() {
         txFiles.clear()

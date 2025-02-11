@@ -1,18 +1,17 @@
-package org.example.project.connection
+package org.example.project.connection.gatt
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
-import android.bluetooth.BluetoothGattCharacteristic.*
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.BluetoothStatusCodes
 import android.bluetooth.le.ScanResult
 import android.content.Context
 import android.util.Log
-import org.example.project.connection.GattServer.Companion.DEFAULT_UUID
+import org.example.project.connection.gatt.GattServer.Companion.DEFAULT_UUID
 import java.util.UUID
 
 class GattClient(
@@ -42,7 +41,7 @@ class GattClient(
     private var initialized = false
 
     private val gattClientCallback = object : BluetoothGattCallback() {
-        override fun onPhyUpdate( gatt: BluetoothGatt?, txPhy: Int, rxPhy: Int, status: Int) {
+        override fun onPhyUpdate(gatt: BluetoothGatt?, txPhy: Int, rxPhy: Int, status: Int) {
             Log.d(TAG, "GattClient, BluetoothGattCallback(), onPhyUpdate")
         }
 
@@ -54,8 +53,10 @@ class GattClient(
         override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
             super.onConnectionStateChange(gatt, status, newState)
 
-            Log.d(TAG, "GattClient, BluetoothGattCallback(), onConnectionStateChange"
-                    + ", status ${GattUtils.getStatus(status)}, newState: $newState")
+            Log.d(
+                TAG, "GattClient, BluetoothGattCallback(), onConnectionStateChange"
+                        + ", status ${GattUtils.getStatus(status)}, newState: $newState"
+            )
 
             // if (status == BluetoothGatt.GATT_SUCCESS) {
                 // disconnect()
@@ -96,16 +97,19 @@ class GattClient(
             Log.d(TAG, "GattClient, run getService()")
             val service = gatt.getService(serviceUuid)
             if (service == null) {
-                Log.d(TAG,"Could not find service: $serviceUuid")
+                Log.d(TAG, "Could not find service: $serviceUuid")
             } else {
                 Log.d(TAG, "GattClient, run getCharacteristic()")
                 val characteristic = service.getCharacteristic(characteristicUuid)
                 if (characteristic == null) {
-                    Log.d(TAG,"Could not find characteristic: ${characteristicUuid}")
+                    Log.d(TAG, "Could not find characteristic: ${characteristicUuid}")
                 } else {
                     targetGatt = gatt
 
-                    Log.d(TAG, "GattClient, set writeType to 'BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT'")
+                    Log.d(
+                        TAG,
+                        "GattClient, set writeType to 'BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT'"
+                    )
                     Log.d(TAG, "GattClient, run setCharacteristicNotification()")
                     initialized = gatt.setCharacteristicNotification(characteristic, true)
                     // sendMessage(gatt, "0123456789 Hello, BLE server! ljjiwuefhuiefifhwbefkhbefhjsebfkhsbfhsbfehEfjhse")
@@ -133,12 +137,12 @@ class GattClient(
         }
 
         override fun onCharacteristicRead(gatt: BluetoothGatt?,
-            characteristic: BluetoothGattCharacteristic?,
-            status: Int
+                                          characteristic: BluetoothGattCharacteristic?,
+                                          status: Int
         ) {
             // onCharacteristicRead(gatt, characteristic, status)
             Log.d(TAG, "GattClient, onCharacteristicRead")
-            Log.d(TAG,"characteristic: $characteristic")
+            Log.d(TAG, "characteristic: $characteristic")
 //            if (gattCharacteristics.isNotEmpty()) {
 //                gatt?.readCharacteristic(gattCharacteristics[0])
 //                gattCharacteristics.removeAt(0)
@@ -154,7 +158,7 @@ class GattClient(
         ) {
             // onCharacteristicRead(gatt, characteristic, status)
             Log.d(TAG, "GattClient, onCharacteristicRead")
-            Log.d(TAG,"characteristic: $characteristic")
+            Log.d(TAG, "characteristic: $characteristic")
             if (gattCharacteristics.isNotEmpty()) {
                 gatt.readCharacteristic(gattCharacteristics[0])
                 gattCharacteristics.removeAt(0)
@@ -278,7 +282,8 @@ class GattClient(
             return
         }
         gattClient = scanResultInternal!!.device.connectGatt(
-            context, false, gattClientCallback, BluetoothDevice.TRANSPORT_LE)
+            context, false, gattClientCallback, BluetoothDevice.TRANSPORT_LE
+        )
         Log.d(TAG, "gatt: $gattClient")
     }
 
@@ -324,7 +329,9 @@ class GattClient(
         val bytes = message.toByteArray(Charsets.UTF_8)
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            val result = gatt.writeCharacteristic(characteristic, bytes, WRITE_TYPE_DEFAULT)
+            val result = gatt.writeCharacteristic(characteristic, bytes,
+                BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            )
             if (result != BluetoothStatusCodes.SUCCESS
             ) {
                 Log.d(TAG, "GattClient, sendMessage(), failed to write data")
@@ -333,7 +340,7 @@ class GattClient(
                 callbackOnDataSend?.invoke(true)
             }
         } else {
-            characteristic.writeType = WRITE_TYPE_DEFAULT
+            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
             characteristic.value = bytes
             if (!gatt.writeCharacteristic(characteristic)) {
                 Log.d(TAG, "GattClient, sendMessage(), failed to write data")

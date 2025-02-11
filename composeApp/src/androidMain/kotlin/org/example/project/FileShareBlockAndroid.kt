@@ -9,7 +9,7 @@ import android.util.Log
 
 import io.github.vinceglb.filekit.core.PlatformFiles
 
-import org.example.project.connection.BluetoothController
+//import org.example.project.connection.BluetoothController
 import org.example.project.utils.TxFileDescriptor
 import org.example.project.fragments.FileShareBlockCommon
 import org.example.project.ui.*
@@ -25,7 +25,7 @@ class FileShareBlockAndroid (
         private const val TAG = "FileShareFragment"
     }
 
-    lateinit var bluetoothController: BluetoothController
+//    lateinit var bluetoothController: BluetoothController
 
     @SuppressLint("MissingPermission")
     override fun onCreate() {
@@ -45,7 +45,7 @@ class FileShareBlockAndroid (
 
 //        val bluetoothManager = (contextFactory.getActivity() as Activity)
 //            .getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        bluetoothController = BluetoothController(appContext, bluetoothManager, notifier)
+        // bluetoothController = BluetoothController(appContext, bluetoothManager, notifier)
     }
 
         fun resolveNewIntent(intent: Intent) {

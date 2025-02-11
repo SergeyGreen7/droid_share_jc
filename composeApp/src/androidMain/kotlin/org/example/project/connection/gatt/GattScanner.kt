@@ -1,4 +1,4 @@
-package org.example.project.connection
+package org.example.project.connection.gatt
 
 import android.annotation.SuppressLint
 import android.bluetooth.le.BluetoothLeScanner
@@ -8,14 +8,14 @@ import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.os.ParcelUuid
 import android.util.Log
-import org.example.project.DeviceInfoAndroid
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.example.project.connection.GattServer.Companion.DEFAULT_UUID
+import org.example.project.DeviceInfoAndroid
+import org.example.project.connection.gatt.GattServer.Companion.DEFAULT_UUID
 import org.example.project.data.DeviceInfoCommon
 import java.util.UUID
 
@@ -46,10 +46,10 @@ class GattScanner (
                 return
             }
 
-            Log.d(TAG,"onScanResult: ${result}")
+            Log.d(TAG, "onScanResult: ${result}")
             if (result.device.name != null) {
-                 Log.d(TAG, "GattScanner, onScanResult()")
-                 Log.d(TAG, "    result: $result")
+                Log.d(TAG, "GattScanner, onScanResult()")
+                Log.d(TAG, "    result: $result")
                 devices[result.device.address] = result
                 Log.d(TAG, "    devices.size = ${devices.size}")
             }
@@ -68,7 +68,7 @@ class GattScanner (
                 if (result == null) {
                     continue
                 }
-                Log.d(TAG,"onBatchScanResults: ${result}")
+                Log.d(TAG, "onBatchScanResults: ${result}")
                 if (result.device.name != null) {
                     devices[result.device.address] = result
                 }
@@ -125,12 +125,14 @@ class GattScanner (
                 var cntr = 0
                 for (i in 0..NUM_SCAN_PERIODS) {
                     delay(BLE_SCAN_PERIOD_MULTIPLE)
-                    Log.d(TAG, "startScanPeriodic, show found BLE nodes, " +
-                        "devices.size = ${devices.size}, cntr = $cntr")
+                    Log.d(
+                        TAG, "startScanPeriodic, show found BLE nodes, " +
+                                "devices.size = ${devices.size}, cntr = $cntr"
+                    )
                     if (cntr++ % 5 == 0) {
                         withContext(Dispatchers.Main) {
                             Log.d(TAG, "startScanPeriodic, run onDeviceListUpdate()")
-                            onDeviceListUpdate(devices.map{ DeviceInfoAndroid(it.value).toCommon() })
+                            onDeviceListUpdate(devices.map { DeviceInfoAndroid(it.value).toCommon() })
                             devices.clear()
                         }
                     }

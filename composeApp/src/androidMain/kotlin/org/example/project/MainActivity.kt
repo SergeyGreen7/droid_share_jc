@@ -55,10 +55,10 @@ class MainActivity : ComponentActivity() {
         )
         fileShareBlock.init()
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(
-            fileShareBlock.bluetoothController.receiver,
-            IntentFilter(BluetoothDevice.ACTION_FOUND)
-        )
+//        LocalBroadcastManager.getInstance(this).registerReceiver(
+//            fileShareBlock.bluetoothController.receiver,
+//            IntentFilter(BluetoothDevice.ACTION_FOUND)
+//        )
 
         setContent {
             GetMainView(

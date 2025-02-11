@@ -3,33 +3,56 @@ package org.example.project.connection
 import org.example.project.data.DeviceInfoCommon
 import java.util.UUID
 
-interface BleManager {
-    fun getName() : String
+abstract class BleManager {
 
-    fun configBleService(
+    private var bleClientConnected = false
+
+    fun isBleClientConnected(): Boolean {
+        return bleClientConnected
+    }
+
+    fun connectBleClient(index: Int) {
+        bleClientConnected = true
+        connectBleClientImpl(index)
+    }
+
+    fun disconnectBleClient() {
+        bleClientConnected = false
+        disconnectBleClientImpl()
+    }
+
+    fun sendMessageBleClient(message: String) {
+        if (bleClientConnected) {
+            sendMessageBleClientImpl(message)
+        }
+    }
+
+    abstract fun getName() : String
+
+    abstract fun configBleService(
         serviceUuid: UUID,
         characteristicUuid: UUID,
         createServerCommand: String,
         destroyServerCommand: String,
         createServerCallback: (name: String) -> Unit,
         destroyServerCallback: () -> Unit)
-    fun startBleService()
-    fun stopBleService()
+    abstract fun startBleService()
+    abstract fun stopBleService()
 
-    fun configBleScanner(
+    abstract fun configBleScanner(
         serviceUuid: UUID,
         onListUpdate: (deviceList: List<DeviceInfoCommon>) -> Unit)
-    fun startBleScanner()
-    fun stopBleScanner()
+    abstract fun startBleScanner()
+    abstract fun stopBleScanner()
 
-    fun configBleClient(
+    abstract fun configBleClient(
         serviceUuid: UUID,
         characteristicUuid: UUID,
         callback: (flag: Boolean) -> Unit)
-    fun setBleClientDataToSend(data: String)
-    fun connectBleClient(index: Int)
-    fun sendMessageBleClient(message: String)
-    fun disconnectBleClient()
+    abstract fun setBleClientDataToSend(data: String)
+    protected abstract fun connectBleClientImpl(index: Int)
+    protected abstract fun disconnectBleClientImpl()
+    protected abstract fun sendMessageBleClientImpl(message: String)
 }
 
 expect fun getBleManager(): BleManager

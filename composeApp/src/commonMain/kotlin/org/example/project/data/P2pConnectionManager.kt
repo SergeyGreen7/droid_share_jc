@@ -28,12 +28,20 @@ class P2pConnectionManager(
         DataTransceiver(notifier, saveFileDir, getClipboardHandler())
     private var clientServer: TcpP2pClientServer = TcpP2pClientServer()
 
-    fun cancelDataTransmission() {
+    fun cancelConnection() {
+        if (isActiveTransmission()) {
+            cancelDataTransmission()
+        } else if (isPairConnection()) {
+            destroyPairConnection()
+        }
+    }
+
+    private fun cancelDataTransmission() {
         println("start cancelDataTransmission(), txJob.isActive? = ${txJob?.isActive}")
         dataTransceiver.cancelDataTransmission()
     }
 
-    fun destroyPairConnection() {
+    private fun destroyPairConnection() {
         println("start destroyPairConnection()")
         dataTransceiver.cancelPairConnection()
     }
@@ -126,7 +134,11 @@ class P2pConnectionManager(
         dataTransceiver.setTransmitterName(name)
     }
 
-    fun isActiveTransmission() : Boolean {
+    fun isActiveConnection(): Boolean {
+        return isActiveTransmission() || isPairConnection()
+    }
+
+    private fun isActiveTransmission() : Boolean {
         println("start isActiveTransmission()")
         println("    txJob.isActive? = ${txJob?.isActive}")
         println("    rxJob.isActive? = ${rxJob?.isActive}")
@@ -134,7 +146,7 @@ class P2pConnectionManager(
         return isJobActive(txJob) || transmissionIsActive
     }
 
-    fun isPairConnection() : Boolean {
+    private fun isPairConnection() : Boolean {
         return pairConnectionIsActive
     }
 

@@ -1,4 +1,4 @@
-package org.example.project.connection
+package org.example.project.connection.gatt
 
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.le.AdvertiseCallback

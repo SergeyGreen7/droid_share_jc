@@ -3,12 +3,15 @@ package org.example.project.connection
 import android.annotation.SuppressLint
 import org.example.project.appContext
 import org.example.project.bluetoothManager
+import org.example.project.connection.gatt.GattClient
+import org.example.project.connection.gatt.GattScanner
+import org.example.project.connection.gatt.GattServer
 import org.example.project.data.DeviceInfoCommon
 import org.example.project.wifiManager
 import java.util.UUID
 
 @SuppressLint("MissingPermission")
-class AndroidBleManager : BleManager {
+class AndroidBleManager : BleManager() {
 
     private var gattClient: GattClient
     private var gattServer: GattServer
@@ -86,18 +89,18 @@ class AndroidBleManager : BleManager {
         gattClient.dataToSend = data
     }
 
-    override fun connectBleClient(index: Int) {
+    override fun connectBleClientImpl(index: Int) {
         val info = gattScanner.getDevice(index)
         if (info != null) {
             gattClient.connect(info.bleScanResult!!)
         }
     }
 
-    override fun sendMessageBleClient(message: String) {
+    override fun sendMessageBleClientImpl(message: String) {
         gattClient.sendMessage(message)
     }
 
-    override fun disconnectBleClient() {
+    override fun disconnectBleClientImpl() {
         gattClient.disconnect()
     }
 

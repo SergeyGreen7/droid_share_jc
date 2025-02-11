@@ -4,7 +4,7 @@ import WinBleNativeApi
 import org.example.project.data.DeviceInfoCommon
 import java.util.UUID
 
-class DesktopBleManager : BleManager {
+class DesktopBleManager : BleManager() {
 
     private val winBle = WinBleNativeApi()
 
@@ -82,15 +82,15 @@ class DesktopBleManager : BleManager {
         winBle.setDataToSend(data)
     }
 
-    override fun connectBleClient(index: Int) {
+    override fun connectBleClientImpl(index: Int) {
      winBle.connectBleClient(index)
     }
 
-    override fun sendMessageBleClient(message: String) {
+    override fun sendMessageBleClientImpl(message: String) {
         winBle.sendMessageBleClient(message)
     }
 
-    override fun disconnectBleClient() {
+    override fun disconnectBleClientImpl() {
         winBle.disconnectBleClient()
     }
 

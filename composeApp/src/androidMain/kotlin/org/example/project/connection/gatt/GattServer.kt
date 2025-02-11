@@ -1,5 +1,4 @@
-package org.example.project.connection
-
+package org.example.project.connection.gatt
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
@@ -30,11 +29,7 @@ class GattServer(
 ) {
     companion object {
         private const val TAG = "GattServer"
-
         val DEFAULT_UUID: UUID = UUID.fromString("aaaabbbb-aabb-aabb-aabb-aaaabbbbaaaa")
-        // val GATT_SERVICE_UUID: UUID = UUID.fromString("5116c812-ad72-449f-a503-f8662bc21cde")
-        // val GATT_CHARACTER_SERVICE_CONFIG_UUID: UUID = UUID.fromString("330fb1d7-afb6-4b00-b5da-3b0feeef9816")
-        // val GATT_CHARACTER_CONNECTION_STATE_UUID: UUID = UUID.fromString("330fb1d7-afb6-4b00-b5da-3b0feeef9816")
     }
 
     private var isActive = false
@@ -66,13 +61,17 @@ class GattServer(
 
     private val advertiseCallback = object : AdvertiseCallback() {
         override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
-            Log.d(TAG, "GattServer, AdvertiseCallback-onStartSuccess(), " +
-                    "Peripheral advertising started.")
+            Log.d(
+                TAG, "GattServer, AdvertiseCallback-onStartSuccess(), " +
+                        "Peripheral advertising started."
+            )
         }
         override fun onStartFailure(errorCode: Int) {
-            Log.d(TAG, "GattServer, onStartFailure(), " +
-                    "Peripheral advertising failed: $errorCode - " +
-                    " ${GattUtils.getAdvertiseFailure(errorCode)}")
+            Log.d(
+                TAG, "GattServer, onStartFailure(), " +
+                        "Peripheral advertising failed: $errorCode - " +
+                        " ${GattUtils.getAdvertiseFailure(errorCode)}"
+            )
         }
     }
 
@@ -113,12 +112,14 @@ class GattServer(
 
         val service = BluetoothGattService(
             serviceUuid,
-            BluetoothGattService.SERVICE_TYPE_PRIMARY)
+            BluetoothGattService.SERVICE_TYPE_PRIMARY
+        )
 
         val serviceConfigCharacteristic = BluetoothGattCharacteristic(
             characteristicUuid,
             BluetoothGattCharacteristic.PROPERTY_WRITE,
-            BluetoothGattCharacteristic.PERMISSION_WRITE)
+            BluetoothGattCharacteristic.PERMISSION_WRITE
+        )
         service.addCharacteristic(serviceConfigCharacteristic)
 
 //        val connectStateCharacteristic = BluetoothGattCharacteristic(
@@ -167,8 +168,10 @@ class GattServer(
         ) {
             super.onConnectionStateChange(device, status, newState)
 
-            Log.d(TAG, "GattServer, onConnectionStateChange(), "+
-                    "device: $device, status = ${GattUtils.getStatus(status)}, newState = $newState")
+            Log.d(
+                TAG, "GattServer, onConnectionStateChange(), " +
+                        "device: $device, status = ${GattUtils.getStatus(status)}, newState = $newState"
+            )
             if (device == null) {
                 return
             }
@@ -199,7 +202,7 @@ class GattServer(
             offset: Int,
             characteristic: BluetoothGattCharacteristic?
         ) {
-            Log.d(TAG,"GattServer, onCharacteristicReadRequest() *DEPRECATED")
+            Log.d(TAG, "GattServer, onCharacteristicReadRequest() *DEPRECATED")
         }
 
         @SuppressLint("MissingPermission")
@@ -265,7 +268,7 @@ class GattServer(
             offset: Int,
             descriptor: BluetoothGattDescriptor?
         ) {
-            Log.d(TAG,"GattServer, onDescriptorReadRequest()")
+            Log.d(TAG, "GattServer, onDescriptorReadRequest()")
         }
 
         override fun onDescriptorWriteRequest(
@@ -277,33 +280,33 @@ class GattServer(
             offset: Int,
             value: ByteArray?
         ) {
-            Log.d(TAG,"GattServer, onDescriptorWriteRequest()")
+            Log.d(TAG, "GattServer, onDescriptorWriteRequest()")
         }
 
         override fun onExecuteWrite(device: BluetoothDevice?, requestId: Int, execute: Boolean) {
-            Log.d(TAG,"GattServer, onExecuteWrite()")
+            Log.d(TAG, "GattServer, onExecuteWrite()")
         }
 
         override fun onNotificationSent(device: BluetoothDevice?, status: Int) {
-            Log.d(TAG,"GattServer, onNotificationSent()")
+            Log.d(TAG, "GattServer, onNotificationSent()")
         }
 
         override fun onMtuChanged(device: BluetoothDevice?, mtu: Int) {
-            Log.d(TAG,"GattServer, onMtuChanged()")
+            Log.d(TAG, "GattServer, onMtuChanged()")
         }
 
         override fun onPhyUpdate(device: BluetoothDevice?, txPhy: Int, rxPhy: Int, status: Int) {
-            Log.d(TAG,"GattServer, onPhyUpdate()")
+            Log.d(TAG, "GattServer, onPhyUpdate()")
         }
 
         override fun onPhyRead(device: BluetoothDevice?, txPhy: Int, rxPhy: Int, status: Int) {
-            Log.d(TAG,"GattServer, onPhyRead()")
+            Log.d(TAG, "GattServer, onPhyRead()")
         }
 
         fun onConnectionUpdated(
             device: BluetoothDevice?, interval: Int, latency: Int, timeout: Int, status: Int
         ) {
-            Log.d(TAG,"GattServer, onConnectionUpdated(), device: $device status = $status")
+            Log.d(TAG, "GattServer, onConnectionUpdated(), device: $device status = $status")
         }
 
         fun onSubrateChange(

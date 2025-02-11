@@ -158,7 +158,6 @@ class DataTransceiver(
 
                 txState = DataTransferState.IDLE
                 CoroutineScope(Dispatchers.IO).launch {
-//                    println("run notifier.cancelConnection()")
                     sendCancelTx()
                     notifier.closeConnection()
                 }
@@ -266,9 +265,7 @@ class DataTransceiver(
                     DataTransferStatus.CANCELED_BY_TX -> {
                         println("File transferring is canceled by transmitter side")
                         notifier.showNotification("File transferring is canceled")
-                        // CoroutineScope(Dispatchers.IO).launch {
                         notifier.closeConnection()
-                        //}
                         return@breakLabel
                     }
 
@@ -276,17 +273,13 @@ class DataTransceiver(
                         println("File transferring is canceled by receiver side")
                         notifier.dismissProgressDialog()
                         notifier.showNotification("File transferring is canceled by receiver")
-                        // CoroutineScope(Dispatchers.IO).launch {
                         notifier.closeConnection()
-                        //}
                         return@breakLabel
                     }
 
                     DataTransferStatus.ERROR -> {
                         println("unknown error occurred during data transmission")
-                        // CoroutineScope(Dispatchers.IO).launch {
                         notifier.closeConnection()
-                        // }
                         throw Exception("unknown error occurred during data transmission")
                     }
                 }
@@ -381,9 +374,7 @@ class DataTransceiver(
             println("rxFilePackDscr.numFiles = ${rxFiles!!.numFiles}")
 
             notifier.showProgressDialog("Receiving data") {
-                // CoroutineScope(Dispatchers.IO).launch {
                 sendCancelRx()
-                // }
                 rxState = DataTransferState.CANCEL_BY_RX
                 println("cancel button is pressed, txState = $txState, rxState = $rxState")
             }
@@ -430,9 +421,7 @@ class DataTransceiver(
                 fileManager.deleteReceivedFiles(rxFiles!!.dscrs)
                 fileManager.deleteFile(rxFileDscr.fileNameReceived)
                 rxState = DataTransferState.IDLE
-                // CoroutineScope(Dispatchers.IO).launch {
                 notifier.closeConnection()
-                // }
             }
             DataTransferStatus.CANCELED_BY_RX -> {
                 println("File transferring '${rxFileDscr.fileNameReceived}' is canceled by receiver side")
@@ -441,16 +430,12 @@ class DataTransceiver(
                 fileManager.deleteReceivedFiles(rxFiles!!.dscrs)
                 fileManager.deleteFile(rxFileDscr.fileNameReceived)
                 rxState = DataTransferState.IDLE
-                // CoroutineScope(Dispatchers.IO).launch {
                 notifier.closeConnection()
-                // }
             }
             DataTransferStatus.ERROR -> {
                 println("unknown data transfer status error during data reception")
                 fileManager.deleteFile(rxFileDscr.fileNameReceived)
-                // CoroutineScope(Dispatchers.IO).launch {
                 notifier.closeConnection()
-                // }
                 throw Exception("unknown data transfer status error during data reception")
             }
         }
@@ -488,10 +473,8 @@ class DataTransceiver(
     private fun receiveCancelTx() {
         println("Receive cancel rx flag, txState = $txState, rxState = $rxState")
         if (rxState == DataTransferState.READY_TO_RECEIVE) {
-            // CoroutineScope(Dispatchers.IO).launch {
             notifier.dismissAlertDialog()
             notifier.closeConnection()
-            // }
         } else if (rxState == DataTransferState.ACTIVE) {
             txState = DataTransferState.CANCEL_BY_RX
         }
@@ -581,9 +564,11 @@ class DataTransceiver(
                 confirmCallback = {
                     CoroutineScope(Dispatchers.IO).launch {
                         rxState = DataTransferState.READY_TO_RECEIVE
-                        // clipboardHandler.enable()
                         notifier.showNotificationDialog("Pair connection is done") {
-                            println("you want do destroy pair")
+                            CoroutineScope(Dispatchers.IO).launch {
+                                sendPairConnectionClose()
+                                notifier.closeConnection()
+                            }
                         }
                         sendPairCreationAccept()
                     }
@@ -606,15 +591,13 @@ class DataTransceiver(
         println("receive dismiss pair creation, txState = $txState, rxState = $rxState")
         if (txState == DataTransferState.READY_TO_TRANSMIT) {
             txState = DataTransferState.ACTIVE
-//            CoroutineScope(Dispatchers.IO).launch {
-//                sendFiles()
-//            }
         }
     }
 
     private fun receivePairConnectionClose() {
         println("receive pair connection close, txState = $txState, rxState = $rxState")
         if (rxState == DataTransferState.READY_TO_RECEIVE) {
+            notifier.dismissAlertDialog()
             notifier.closePairConnection()
         }
     }
