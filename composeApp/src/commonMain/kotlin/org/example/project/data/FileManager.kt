@@ -9,7 +9,7 @@ class FileManager (
      private val saveFileDir: String
 ) {
     fun getSaveFileName(fileName: String) : String{
-        var fileNameUpd = ""
+        var fileNameUpd: String
         val pair = getFileNameAndExtension(fileName)
         val name = pair.first
         val extension = pair.second

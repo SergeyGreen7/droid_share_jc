@@ -49,11 +49,6 @@ class FileShareViewModel : ViewModel() {
     var dnsServiceEnabledDebug = mutableStateOf(false)
     var dnsScannerEnabledDebug = mutableStateOf(false)
 
-    fun reset() {
-        onDataRemove()
-        dropSelectedIndex()
-    }
-
     fun setHostName(name: String) {
         nameStr.value = "Your name is $name"
     }

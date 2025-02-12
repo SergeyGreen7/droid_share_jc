@@ -2,7 +2,6 @@ package org.example.project
 
 import android.annotation.SuppressLint
 import android.bluetooth.le.ScanResult
-import android.net.wifi.p2p.WifiP2pDevice
 import org.example.project.data.DeviceInfoCommon
 import org.example.project.data.InfoType
 

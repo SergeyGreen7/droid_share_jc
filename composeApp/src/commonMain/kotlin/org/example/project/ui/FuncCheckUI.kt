@@ -58,7 +58,7 @@ fun FuncCheckUI(
     }
 
     val coroutineScope = rememberCoroutineScope()
-    var progress = 0.0f
+    var progress: Float
     var increaseProgressFlag by remember { mutableStateOf(false) }
     val increaseProgressTask = suspend {
         progress = 0.0f
