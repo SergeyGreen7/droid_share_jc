@@ -19,8 +19,6 @@ class AndroidBleManager : BleManager() {
     private var name = ""
 
     init {
-//        val bluetoothManager = (contextFactory.getActivity() as Activity)
-//            .getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         gattScanner = GattScanner(bluetoothManager.adapter.bluetoothLeScanner)
         gattServer = GattServer(appContext, bluetoothManager)
         gattClient = GattClient(appContext)

@@ -13,7 +13,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
-import org.example.project.ui.GetMainView
+import org.example.project.ui.FileShareViewModel
+import org.example.project.ui.FileShareManiUI
 
 
 class MainActivity : ComponentActivity() {
@@ -22,6 +23,7 @@ class MainActivity : ComponentActivity() {
         private const val TAG = "MainActivity"
     }
 
+    private lateinit var vm: FileShareViewModel
     private lateinit var fileShareBlock: FileShareBlockAndroid
     private var startIntentResolved = false
 
@@ -47,27 +49,15 @@ class MainActivity : ComponentActivity() {
 
         // getServiceNotification(this)
 
+        vm = FileShareViewModel()
         fileShareBlock = FileShareBlockAndroid(
+            vm,
             Environment.getExternalStorageDirectory().toString() + "/Download/",
         )
         fileShareBlock.init()
 
-//        LocalBroadcastManager.getInstance(this).registerReceiver(
-//            fileShareBlock.bluetoothController.receiver,
-//            IntentFilter(BluetoothDevice.ACTION_FOUND)
-//        )
-
         setContent {
-            GetMainView(
-                fileShareBlock.enableBleServiceCallback,
-                fileShareBlock.enableBleScannerCallback,
-                fileShareBlock.sendDataCallback,
-                fileShareBlock.createPairCallback,
-                fileShareBlock.setDeviceInfoCommon,
-                fileShareBlock.getFileDescriptorFromPicker,
-                fileShareBlock.registerMcDnsServiceDebug,
-                fileShareBlock.enableMcDnsScannerDebug,
-            )
+            FileShareManiUI(vm)
         }
 
         super.onStart()
@@ -76,7 +66,6 @@ class MainActivity : ComponentActivity() {
             onNewIntent(intent)
             startIntentResolved = true
         }
-
     }
 
     override fun onNewIntent(intent: Intent) {

@@ -9,23 +9,21 @@ import android.util.Log
 
 import io.github.vinceglb.filekit.core.PlatformFiles
 
-//import org.example.project.connection.BluetoothController
 import org.example.project.utils.TxFileDescriptor
 import org.example.project.fragments.FileShareBlockCommon
 import org.example.project.ui.*
 import java.io.InputStream
 
 class FileShareBlockAndroid (
+    vm: FileShareViewModel,
     saveFileDir: String,
 ) : FileShareBlockCommon(
-    saveFileDir
+    vm, saveFileDir
 ) {
 
     companion object {
         private const val TAG = "FileShareFragment"
     }
-
-//    lateinit var bluetoothController: BluetoothController
 
     @SuppressLint("MissingPermission")
     override fun onCreate() {
@@ -42,10 +40,6 @@ class FileShareBlockAndroid (
         +"\nMANUFACTURER: "+android.os.Build.MANUFACTURER
         +"\nPRODUCT: "+android.os.Build.PRODUCT)
         Log.d(TAG, "$sb")
-
-//        val bluetoothManager = (contextFactory.getActivity() as Activity)
-//            .getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        // bluetoothController = BluetoothController(appContext, bluetoothManager, notifier)
     }
 
         fun resolveNewIntent(intent: Intent) {
@@ -85,16 +79,11 @@ class FileShareBlockAndroid (
         }
 
         if (txFiles.isNotEmpty()) {
-            sendDataButtonIsActive.value = true
-            fileStr.value = "file(s) selected"
+            vm.onDataSelection()
         }
     }
 
-    override var getFileDescriptorFromPicker = { files: PlatformFiles? ->
-        enableBleScannerCallback(false)
-        sendDataButtonIsActive.value = false
-        deviceList.clear()
-
+    override fun getFileDescriptorFromPickerImpl( files: PlatformFiles? ) {
         txFiles.clear()
         if (!files.isNullOrEmpty()) {
             println("$files")
@@ -103,11 +92,8 @@ class FileShareBlockAndroid (
                 println("file = $file")
                 addFileDescriptor(file.uri)
             }
-            fileStr.value = "file(s) selected"
+            vm.onDataSelection()
         }
-        
-        enableBleScannerCallback(true)
-        sendDataButtonIsActive.value = true
     }
 
     @SuppressLint("Range")

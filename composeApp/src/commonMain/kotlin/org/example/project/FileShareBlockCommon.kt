@@ -12,30 +12,14 @@ import org.example.project.data.DeviceInfoCommon
 import org.example.project.utils.NotificationInterface
 import org.example.project.data.P2pConnectionManager
 import org.example.project.getPlatform
-import org.example.project.ui.alertDialogConfirmCallback
-import org.example.project.ui.alertDialogDismissCallback
-import org.example.project.ui.alertDialogText
-import org.example.project.ui.alertDialogTitle
+import org.example.project.ui.FileShareViewModel
 import org.example.project.utils.TxFilesDescriptor
-import org.example.project.ui.fileStr
-import org.example.project.ui.nameStr
-import org.example.project.ui.notificationDialogDismissCallback
-import org.example.project.ui.notificationDialogTitle
-import org.example.project.ui.progressDialogCancelCallback
-import org.example.project.ui.progressDialogProgressValue
-import org.example.project.ui.progressDialogTitle
-import org.example.project.ui.selectedIndex
-import org.example.project.ui.sendDataButtonIsActive
-import org.example.project.ui.shouldShowAlertDialog
-import org.example.project.ui.shouldShowNotificationDialog
-import org.example.project.ui.shouldShowProgressDialog
-import org.example.project.ui.showSnackbar
-import org.example.project.ui.snackbarMessage
 import java.net.InetAddress
 import java.util.UUID
 
 
 abstract class FileShareBlockCommon (
+    protected val vm: FileShareViewModel,
     private val saveFileDir: String,
 ) {
 
@@ -64,45 +48,41 @@ abstract class FileShareBlockCommon (
         selectedDeviceIndex = index
     }
 
-    abstract var getFileDescriptorFromPicker: (files: PlatformFiles?) -> Unit
+    var getFileDescriptorFromPicker = { files: PlatformFiles? ->
+        getFileDescriptorFromPickerImpl(files)
+    }
+    abstract fun getFileDescriptorFromPickerImpl(files: PlatformFiles?)
 
     protected val notifier = object: NotificationInterface {
         override fun updateProgressDialog(progress: Float) {
-            progressDialogProgressValue.floatValue = progress
+            vm.setProgressWindowValue(progress)
         }
 
         override fun dismissProgressDialog() {
-            shouldShowProgressDialog.value = false
+            vm.closeProgressWindow()
         }
 
         override fun showNotificationDialog(title: String, cancelCallback: () -> Unit) {
-            shouldShowNotificationDialog.value = true
-            notificationDialogTitle.value = title
-            // var notificationDialogText = mutableStateOf("")
-            notificationDialogDismissCallback.value = cancelCallback
+            vm.showPairingWindow(title, "", cancelCallback)
         }
 
         override fun updateNotificationDialogTitle(title: String) {
-            notificationDialogTitle.value = title
+            vm.updateTitlePairingWindow(title)
         }
 
         override fun dismissNotificationDialog() {
-            shouldShowNotificationDialog.value = false
+            vm.closePairingWindow()
         }
 
         override fun showProgressDialog(
             title: String,
             cancelCallback: () -> Unit
         ) {
-            progressDialogTitle.value = title
-            progressDialogCancelCallback.value = cancelCallback
-            progressDialogProgressValue.floatValue = 0.0F
-            shouldShowProgressDialog.value = true
+            vm.showProgressWindow(title, cancelCallback)
         }
 
         override fun showNotification(message: String) {
-            snackbarMessage.value = message
-            showSnackbar.value = true
+            vm.showNotificationWindow(message)
         }
 
         override fun showAlertDialog(
@@ -110,15 +90,11 @@ abstract class FileShareBlockCommon (
             confirmCallback: () -> Unit,
             dismissCallback: () -> Unit
         ) {
-            alertDialogTitle.value = ""
-            alertDialogText.value = message
-            alertDialogConfirmCallback.value = confirmCallback
-            alertDialogDismissCallback.value = dismissCallback
-            shouldShowAlertDialog.value = true
+            vm.showDialogWindow("", message, confirmCallback, dismissCallback)
         }
 
         override fun dismissAlertDialog() {
-            shouldShowAlertDialog.value = false
+            vm.closeDialogWindow()
         }
 
         override fun closeConnection() {
@@ -149,14 +125,14 @@ abstract class FileShareBlockCommon (
         bleManager = getBleManager()
         onCreate()
         bleManager.startBleService()
-        bleManager.startBleScanner()
+        enableBleScannerCallback(true)
 
         println("getPlatform() = ${getPlatform()}")
     }
 
     fun stopAndDestroy() {
         stopConnection()
-        bleManager.stopBleScanner()
+        enableBleScannerCallback(false)
         bleManager.stopBleService()
         bleManager.disconnectBleClient()
     }
@@ -245,21 +221,18 @@ abstract class FileShareBlockCommon (
             devices.clear()
             devices = deviceList.toMutableList()
 
-            org.example.project.ui.deviceList.clear()
-            deviceList.forEach {
-                org.example.project.ui.deviceList.add(it)
-            }
+            vm.setDeviceList(deviceList)
         }
 
         val name = bleManager.getName()
-        nameStr.value = "Your name: $name"
+        vm.setHostName(name)
         connectionManager.setTransmitterName(name)
     }
 
     private fun closeConnectionFunc() {
         println("start closeConnectionFunc()")
         connectionManager.destroySocket()
-        bleManager.startBleScanner()
+        enableBleScannerCallback(true)
         lnsManager.stopScan()
         unregisterLocalNetworkService()
         bleManager.disconnectBleClient()
@@ -268,7 +241,7 @@ abstract class FileShareBlockCommon (
     private fun closePairConnectionFunc() {
         println("start closePairConnectionFunc()")
         connectionManager.destroySocket()
-        bleManager.startBleScanner()
+        enableBleScannerCallback(true)
         lnsManager.stopScan()
         unregisterLocalNetworkService()
         bleManager.disconnectBleClient()
@@ -281,6 +254,7 @@ abstract class FileShareBlockCommon (
             bleManager.stopBleService()
             unregisterLocalNetworkService()
         }
+        vm.bleServiceEnabledDebug.value = isEnabled
     }
 
     val enableBleScannerCallback = { isEnabled: Boolean ->
@@ -289,6 +263,7 @@ abstract class FileShareBlockCommon (
         } else {
             bleManager.stopBleScanner()
         }
+        vm.bleScannerEnabledDebug.value = isEnabled
     }
 
     val sendDataCallback = sendDataCallback@ {
@@ -304,7 +279,7 @@ abstract class FileShareBlockCommon (
             return@sendDataCallback
         }
 
-        bleManager.stopBleScanner()
+        enableBleScannerCallback(false)
 
         notifier.showProgressDialog("Sending data") {
             stopConnection()
@@ -350,37 +325,10 @@ abstract class FileShareBlockCommon (
         disableConnectionState()
     }
 
-//    private fun stopDataTransmission() {
-//        println("start stopDataTransmission(), " +
-//                "activeDataTransmission = ${connectionManager.isActiveTransmission()}")
-//
-//        if (connectionManager.isActiveTransmission()) {
-//            connectionManager.cancelDataTransmission()
-//        } else {
-//            bleManager.sendMessageBleClient("$DESTROY_SERVER_COMMAND@")
-//            notifier.closeConnection()
-//        }
-//        disableConnectionState()
-//    }
-//
-//    private fun destroyPairConnection() {
-//        println("start stopDataTransmission(), " +
-//                "activeDataTransmission = ${connectionManager.isActiveTransmission()}")
-//
-//        if (connectionManager.isPairConnection()) {
-//            connectionManager.destroyPairConnection()
-//        } else {
-//            bleManager.sendMessageBleClient("$DESTROY_SERVER_COMMAND@")
-//            notifier.closePairConnection()
-//        }
-//        disableConnectionState()
-//    }
-
     protected fun disableConnectionState() {
         txFiles.clear()
-        selectedIndex.value = -1
-        sendDataButtonIsActive.value = false
-        fileStr.value = "file(s) not selected"
+        vm.dropSelectedIndex()
+        vm.onDataRemove()
     }
 
     private fun setLocalNetworkServiceName(name: String) {
@@ -398,7 +346,7 @@ abstract class FileShareBlockCommon (
         lnsManager.unregisterService()
     }
 
-    var registerMcDnsServiceDebug = { flag: Boolean ->
+    private var enableMcDnsServiceDebug = { flag: Boolean ->
         if (flag) {
             registerLocalNetworkService()
         } else {
@@ -406,12 +354,23 @@ abstract class FileShareBlockCommon (
         }
     }
 
-    var enableMcDnsScannerDebug = { flag: Boolean ->
+    private var enableMcDnsScannerDebug = { flag: Boolean ->
         if (flag) {
             lnsManager.startScan()
         } else {
             lnsManager.stopScan()
         }
+    }
+
+    init {
+        vm.bleServiceCallback = enableBleServiceCallback
+        vm.bleScannerCallback = enableBleScannerCallback
+        vm.sendDataCallback = sendDataCallback
+        vm.pairCreationCallback = createPairCallback
+        vm.setDeviceInfoCallback = setDeviceInfoCommon
+        vm.createFileDscrList = getFileDescriptorFromPicker
+        vm.enableMcDnsService = enableMcDnsServiceDebug
+        vm.enableMcDnsScanner = enableMcDnsScannerDebug
     }
 
 }

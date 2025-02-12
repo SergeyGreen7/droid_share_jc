@@ -45,6 +45,7 @@ abstract class BleManager {
     abstract fun startBleScanner()
     abstract fun stopBleScanner()
 
+    // TODO: add notification from BLE client in case if message is failed to send
     abstract fun configBleClient(
         serviceUuid: UUID,
         characteristicUuid: UUID,

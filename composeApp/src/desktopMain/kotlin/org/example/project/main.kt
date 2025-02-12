@@ -3,16 +3,18 @@ package org.example.project
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import org.example.project.ui.GetMainView
+import org.example.project.ui.FileShareViewModel
+import org.example.project.ui.FileShareManiUI
 
+val vm = FileShareViewModel()
 val fileShareBlock = FileShareBlockDesktop(
-    "C:/Users/Sergey/Downloads/fs_test/")
+    vm,
+    "C:/Users/Sergey/Downloads/fs_test/",
+    )
 
 fun main() = application {
 
     fileShareBlock.init()
-
-
 
     Window(
         onCloseRequest = {
@@ -23,19 +25,9 @@ fun main() = application {
     ) {
         DesktopApp()
     }
-
 }
 
 @Composable
 fun DesktopApp() {
-    GetMainView(
-        fileShareBlock.enableBleServiceCallback,
-        fileShareBlock.enableBleScannerCallback,
-        fileShareBlock.sendDataCallback,
-        fileShareBlock.createPairCallback,
-        fileShareBlock.setDeviceInfoCommon,
-        fileShareBlock.getFileDescriptorFromPicker,
-        fileShareBlock.registerMcDnsServiceDebug,
-        fileShareBlock.enableMcDnsScannerDebug,
-    )
+    FileShareManiUI(vm)
 }

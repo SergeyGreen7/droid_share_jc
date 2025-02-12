@@ -7,9 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.CoroutineScope
@@ -17,17 +14,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-var snackbarMessage = mutableStateOf("")
-var showSnackbar = mutableStateOf(false)
-
 @Composable
-fun ShowSnackBar(
-    autoDismiss: Boolean,
-    timeout: Long
+fun NotificationWindow(
+    vm: FileShareViewModel,
 ) {
-    val snackbarMessage by remember { snackbarMessage }
-
-    if (showSnackbar.value) {
+    if (vm.showNotificationWindow.value) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.BottomCenter
@@ -40,17 +31,17 @@ fun ShowSnackBar(
                     modifier =  Modifier
                         .weight(1f),
                 ) {
-                    Text(text = snackbarMessage)
+                    Text(text = vm.notificationWindowMessage.value)
                 }
                 Spacer(modifier = Modifier.weight(0.5f))
             }
         }
     }
 
-    if (autoDismiss && showSnackbar.value) {
+    if (vm.notificationWindowAutoclose && vm.showNotificationWindow.value) {
         CoroutineScope(Dispatchers.IO).launch {
-            delay(timeout)
-            showSnackbar.value = false
+            delay(vm.notificationWindowTimeoutMillis)
+            vm.showNotificationWindow.value = false
         }
     }
 }

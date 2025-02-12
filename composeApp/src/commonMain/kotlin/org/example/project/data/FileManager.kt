@@ -8,9 +8,6 @@ import java.io.FileOutputStream
 class FileManager (
      private val saveFileDir: String
 ) {
-    private val TAG = "FileManager"
-    // private val SAVE_FILE_DIR = Environment.getExternalStorageDirectory().toString() + "/Download/"
-
     fun getSaveFileName(fileName: String) : String{
         var fileNameUpd = ""
         val pair = getFileNameAndExtension(fileName)
